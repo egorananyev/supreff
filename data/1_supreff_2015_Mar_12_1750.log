@@ -1,0 +1,30 @@
+0.6989 	WARNING 	Movie2 stim could not be imported and won't be available
+7.1424 	EXP 	Created window1 = Window(allowGUI=False, allowStencil=False, autoLog=True, bitsMode=UNKNOWN, blendMode='avg', color=u'black', colorSpace='named', fullscr=UNKNOWN, gamma=None, lms=UNKNOWN, monitor=<psychopy.monitors.calibTools.Monitor instance at 0xb9f0ad0>, name='window1', pos=[0, 0], screen=0, size=array([1920, 1080]), stereo=False, units='deg', useFBO=True, viewOri=0.0, viewPos=None, viewScale=None, waitBlanking=True, winType='pyglet')
+7.1424 	EXP 	window1: recordFrameIntervals = False
+7.3090 	EXP 	window1: recordFrameIntervals = True
+7.3979 	WARNING 	t of last frame was 21.77ms (=1/45)
+7.4203 	WARNING 	t of last frame was 22.37ms (=1/44)
+7.4818 	WARNING 	t of last frame was 21.92ms (=1/45)
+7.6765 	EXP 	window1: recordFrameIntervals = False
+7.8108 	EXP 	Created instrText = TextStim(alignHoriz='center', alignVert='center', antialias=True, autoLog=True, bold=False, color=u'white', colorSpace='named', contrast=1.0, depth=0.0, flipHoriz=False, flipVert=False, font=u'Cambria', fontFiles=[], height=1, italic=False, name='instrText', opacity=1.0, ori=0, pos=array([ 0.,  0.]), rgb=array([ 255.,  255.,  255.]), text=unicode(...), units='deg', win=Window(...), wrapWidth=15.0)
+7.8114 	EXP 	<method-wrapper '__getattribute__' of attributeSetter object at 0x5f6c30>: vertices = array([[-3.66,  3.66],
+       [ 3.66,  3.66],
+       [ 3.66, -3.66],
+       [-3.66, -3.66]])
+7.8134 	EXP 	Created windowLeft = Rect(autoDraw=False, autoLog=True, closeShape=True, contrast=1.0, depth=0.0, fillColor=u'black', fillColorSpace='named', fillRGB=array([ 0.,  0.,  0.]), interpolate=True, lineColor=u'white', lineColorSpace='named', lineRGB=array([ 255.,  255.,  255.]), lineWidth=1, name='windowLeft', opacity=1.0, ori=array(0.0), pos=array([ 0.,  0.]), size=array([ 1.,  1.]), units='deg', vertices=ndarray(...), win=Window(...))
+7.8188 	EXP 	Created target = Polygon(autoDraw=False, autoLog=True, closeShape=True, contrast=1.0, depth=-2.0, fillColor=array([ 1.,  1.,  1.]), fillColorSpace='rgb', fillRGB=array([ 1.,  1.,  1.]), interpolate=True, lineColor=array([ 1.,  1.,  1.]), lineColorSpace='rgb', lineRGB=array([ 1.,  1.,  1.]), lineWidth=1, name='target', opacity=1.0, ori=array(0.0), pos=array([ 0.,  0.]), size=array([ 0.46,  0.46]), units='deg', vertices=ndarray(...), win=Window(...))
+7.8275 	EXP 	instrText: autoDraw = True
+8.1119 	DATA 	Keypress: space
+8.1168 	EXP 	Imported cond-expt01.csv as conditions, 20 conditions, 15 params
+8.1174 	EXP 	Created sequence: random, trialTypes=20, nReps=4, seed=None
+8.1183 	EXP 	New trial (rep=0, index=0): {'targCorrAns': 'down', 'targDir': 'left', 'maskSize': 0.46000000000000002, 'maskColGrey': 0, 'targShape': 'circle', 'maskColYellow': 1, 'targColour': 'red', 'targLoc': 'below', 'maskColRed': 1, 'maskColGreen': 1, 'maskShape': 'square', 'targSpeed': 3, 'maskSpeed': 5, 'targSize': 0.46000000000000002, 'maskColBlue': 1}
+8.1187 	EXP 	window1: recordFrameIntervals = False
+8.1286 	EXP 	instrText: autoDraw = False
+8.1286 	EXP 	target: fillColor = 'red (named)'
+8.1286 	EXP 	target: lineColor = 'red (named)'
+8.1286 	EXP 	windowLeft: autoDraw = True
+8.1287 	EXP 	window1: recordFrameIntervals = False
+9.1466 	EXP 	target: autoDraw = True
+12.7241 	EXP 	windowLeft: autoDraw = False
+12.7241 	EXP 	target: autoDraw = False
+25.8472 	DATA 	Keypress: escape

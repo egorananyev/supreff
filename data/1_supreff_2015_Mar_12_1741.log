@@ -1,0 +1,19 @@
+0.5150 	WARNING 	Movie2 stim could not be imported and won't be available
+3.6725 	EXP 	Created window1 = Window(allowGUI=False, allowStencil=False, autoLog=True, bitsMode=UNKNOWN, blendMode='avg', color=u'black', colorSpace='named', fullscr=UNKNOWN, gamma=None, lms=UNKNOWN, monitor=<psychopy.monitors.calibTools.Monitor instance at 0xb9b7ad0>, name='window1', pos=[0, 0], screen=0, size=array([1920, 1080]), stereo=False, units='deg', useFBO=True, viewOri=0.0, viewPos=None, viewScale=None, waitBlanking=True, winType='pyglet')
+3.6725 	EXP 	window1: recordFrameIntervals = False
+3.8394 	EXP 	window1: recordFrameIntervals = True
+4.0230 	EXP 	window1: recordFrameIntervals = False
+4.1787 	EXP 	Created instrText = TextStim(alignHoriz='center', alignVert='center', antialias=True, autoLog=True, bold=False, color=u'white', colorSpace='named', contrast=1.0, depth=0.0, flipHoriz=False, flipVert=False, font=u'Cambria', fontFiles=[], height=1, italic=False, name='instrText', opacity=1.0, ori=0, pos=array([ 0.,  0.]), rgb=array([ 255.,  255.,  255.]), text=unicode(...), units='deg', win=Window(...), wrapWidth=15.0)
+4.1843 	EXP 	Created target = Polygon(autoDraw=False, autoLog=True, closeShape=True, contrast=1.0, depth=-1.0, fillColor=array([ 1.,  1.,  1.]), fillColorSpace='rgb', fillRGB=array([ 1.,  1.,  1.]), interpolate=True, lineColor=array([ 1.,  1.,  1.]), lineColorSpace='rgb', lineRGB=array([ 1.,  1.,  1.]), lineWidth=1, name='target', opacity=1.0, ori=array(0.0), pos=array([ 0.,  0.]), size=array([ 0.46,  0.46]), units='deg', vertices=ndarray(...), win=Window(...))
+4.2069 	EXP 	instrText: autoDraw = True
+5.2100 	DATA 	Keypress: space
+5.2147 	EXP 	Imported cond-expt01.csv as conditions, 20 conditions, 15 params
+5.2153 	EXP 	Created sequence: random, trialTypes=20, nReps=4, seed=None
+5.2162 	EXP 	New trial (rep=0, index=0): {'targCorrAns': 'up', 'targDir': 'right', 'maskSize': 0.46000000000000002, 'maskColGrey': 0, 'targShape': 'circle', 'maskColYellow': 1, 'targColour': 'red', 'targLoc': 'above', 'maskColRed': 1, 'maskColGreen': 1, 'maskShape': 'square', 'targSpeed': 3, 'maskSpeed': 2, 'targSize': 0.46000000000000002, 'maskColBlue': 1}
+5.2166 	EXP 	window1: recordFrameIntervals = False
+5.2262 	EXP 	instrText: autoDraw = False
+5.2262 	EXP 	target: fillColor = 'red (named)'
+5.2262 	EXP 	target: lineColor = 'red (named)'
+5.2262 	EXP 	window1: recordFrameIntervals = False
+6.2475 	EXP 	target: autoDraw = True
+8.8710 	DATA 	Keypress: escape
