@@ -1,9 +1,0 @@
-2.3193 	WARNING 	Movie2 stim could not be imported and won't be available
-10.4905 	EXP 	Created window1 = Window(allowGUI=False, allowStencil=False, autoLog=True, bitsMode=UNKNOWN, blendMode='avg', color=array([ 0.,  0.,  0.]), colorSpace='rgb', fullscr=UNKNOWN, gamma=None, lms=UNKNOWN, monitor=<psychopy.monitors.calibTools.Monitor instance at 0xb8b79e0>, name='window1', pos=[0, 0], screen=0, size=array([1920, 1080]), stereo=False, units=u'norm', useFBO=True, viewOri=0.0, viewPos=None, viewScale=None, waitBlanking=True, winType='pyglet')
-10.4905 	EXP 	window1: recordFrameIntervals = False
-10.6566 	EXP 	window1: recordFrameIntervals = True
-10.8406 	EXP 	window1: recordFrameIntervals = False
-10.8468 	EXP 	Created target = Polygon(autoDraw=False, autoLog=True, closeShape=True, contrast=1.0, depth=-1.0, fillColor=array([ 1.,  1.,  1.]), fillColorSpace='rgb', fillRGB=array([ 1.,  1.,  1.]), interpolate=True, lineColor=array([ 1.,  1.,  1.]), lineColorSpace='rgb', lineRGB=array([ 1.,  1.,  1.]), lineWidth=1, name='target', opacity=1.0, ori=array(0.0), pos=array([ 0.,  0.]), size=array([ 0.46,  0.46]), units='deg', vertices=ndarray(...), win=Window(...))
-10.8469 	EXP 	window1: recordFrameIntervals = False
-10.8907 	EXP 	window1: recordFrameIntervals = False
-11.8770 	EXP 	target: autoDraw = True

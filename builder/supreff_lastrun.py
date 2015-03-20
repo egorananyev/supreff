@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-This experiment was created using PsychoPy2 Experiment Builder (v1.82.00), Thu Mar 12 17:51:47 2015
+This experiment was created using PsychoPy2 Experiment Builder (v1.82.00), Mon Mar 16 14:25:35 2015
 If you publish work using this script please cite the relevant PsychoPy publications
   Peirce, JW (2007) PsychoPy - Psychophysics software in Python. Journal of Neuroscience Methods, 162(1-2), 8-13.
   Peirce, JW (2009) Generating stimuli for neuroscience using PsychoPy. Frontiers in Neuroinformatics, 2:10. doi: 10.3389/neuro.11.010.2008
@@ -20,7 +20,7 @@ _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 
 # Store info about the experiment session
-expName = u'supreff'  # from the Builder filename that created this script
+expName = 'supreff'  # from the Builder filename that created this script
 expInfo = {u'session': u'001', u'participant': u''}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
@@ -33,7 +33,7 @@ filename = _thisDir + os.sep + 'data/%s_%s_%s' %(expInfo['participant'], expName
 # An ExperimentHandler isn't essential but helps with data saving
 thisExp = data.ExperimentHandler(name=expName, version='',
     extraInfo=expInfo, runtimeInfo=None,
-    originPath='/Users/Egor/Dropbox/Projects/mrt/supreff/supreff.psyexp',
+    originPath=u'/Users/Egor/Dropbox/Projects/mrt/supreff/supreff.psyexp',
     savePickle=True, saveWideText=True,
     dataFileName=filename)
 #save a log file for detail verbose info
@@ -46,7 +46,7 @@ endExpNow = False  # flag for 'escape' or other condition => quit the exp
 
 # Setup the Window
 win = visual.Window(size=(1920, 1080), fullscr=True, screen=0, allowGUI=False, allowStencil=False,
-    monitor=u'testMonitor', color=u'black', colorSpace='rgb',
+    monitor='testMonitor', color='black', colorSpace='rgb',
     blendMode='avg', useFBO=True,
     units='deg')
 # store frame rate of monitor if we can measure it successfully
@@ -59,27 +59,34 @@ else:
 # Initialize components for Routine "instructions"
 instructionsClock = core.Clock()
 instrText = visual.TextStim(win=win, ori=0, name='instrText',
-    text=u'Indicate whether the red \ncircle appeared above or \nbelow fixation.\n\n"up" = above\n"down" = below',    font=u'Cambria',
+    text='Indicate whether the red \ncircle appeared above or \nbelow fixation.\n\n"up" = above\n"down" = below',    font='Cambria',
     pos=[0, 0], height=1, wrapWidth=None,
-    color=u'white', colorSpace='rgb', opacity=1,
+    color='white', colorSpace='rgb', opacity=1,
     depth=0.0)
 
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
 windowLeft = visual.Rect(win=win, name='windowLeft',
-    width=[7.32, 7.32][0], height=[7.32, 7.32][1],
-    ori=0, pos=[0, 0],
+    width=[boxSize, boxSize][0], height=[boxSize, boxSize][1],
+    ori=0, pos=[-boxOffsetX, boxOffsetY],
     lineWidth=1, lineColor=u'white', lineColorSpace='rgb',
     fillColor=u'black', fillColorSpace='rgb',
     opacity=1,depth=0.0, 
 interpolate=True)
+windowRight = visual.Rect(win=win, name='windowRight',
+    width=[boxSize, boxSize][0], height=[boxSize, boxSize][1],
+    ori=0, pos=[boxOffsetX, boxOffsetY],
+    lineWidth=1, lineColor=[1,1,1], lineColorSpace='rgb',
+    fillColor=[1,1,1], fillColorSpace='rgb',
+    opacity=1,depth=-1.0, 
+interpolate=True)
 ISI = core.StaticPeriod(win=win, screenHz=expInfo['frameRate'], name='ISI')
 target = visual.Polygon(win=win, name='target',units='deg', 
-    edges = 30, size=[0.46, 0.46],
+    edges = 30, size=[targSize, targSize],
     ori=0, pos=[0, 0],
     lineWidth=1, lineColor=1.0, lineColorSpace='rgb',
     fillColor=1.0, fillColorSpace='rgb',
-    opacity=1,depth=-2.0, 
+    opacity=1,depth=-3.0, 
 interpolate=True)
 
 # Create some handy timers
@@ -161,7 +168,7 @@ for thisComponent in instructionsComponents:
 
 # set up handler to look after randomisation of conditions etc
 trials = data.TrialHandler(nReps=4, method='random', 
-    extraInfo=expInfo, originPath='/Users/Egor/Dropbox/Projects/mrt/supreff/supreff.psyexp',
+    extraInfo=expInfo, originPath=u'/Users/Egor/Dropbox/Projects/mrt/supreff/supreff.psyexp',
     trialList=data.importConditions('cond-expt01.csv'),
     seed=None, name='trials')
 thisExp.addLoop(trials)  # add the loop to the experiment
@@ -190,6 +197,7 @@ for thisTrial in trials:
     # keep track of which components have finished
     trialComponents = []
     trialComponents.append(windowLeft)
+    trialComponents.append(windowRight)
     trialComponents.append(ISI)
     trialComponents.append(target)
     trialComponents.append(key_upDown)
@@ -213,6 +221,15 @@ for thisTrial in trials:
             windowLeft.setAutoDraw(True)
         if windowLeft.status == STARTED and t >= (0.0 + (4.6-win.monitorFramePeriod*0.75)): #most of one frame period left
             windowLeft.setAutoDraw(False)
+        
+        # *windowRight* updates
+        if t >= 0.0 and windowRight.status == NOT_STARTED:
+            # keep track of start time/frame for later
+            windowRight.tStart = t  # underestimates by a little under one frame
+            windowRight.frameNStart = frameN  # exact frame index
+            windowRight.setAutoDraw(True)
+        if windowRight.status == STARTED and t >= (0.0 + (4.6-win.monitorFramePeriod*0.75)): #most of one frame period left
+            windowRight.setAutoDraw(False)
         
         # *target* updates
         if t >= 1 and target.status == NOT_STARTED:

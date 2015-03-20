@@ -1,7 +1,7 @@
 #!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 """
-This experiment was created using PsychoPy2 Experiment Builder (v1.82.00), Mon Mar 16 14:30:23 2015
+This experiment was created using PsychoPy2 Experiment Builder (v1.82.00), Mon Mar 16 14:52:55 2015
 If you publish work using this script please cite the relevant PsychoPy publications
   Peirce, JW (2007) PsychoPy - Psychophysics software in Python. Journal of Neuroscience Methods, 162(1-2), 8-13.
   Peirce, JW (2009) Generating stimuli for neuroscience using PsychoPy. Frontiers in Neuroinformatics, 2:10. doi: 10.3389/neuro.11.010.2008
@@ -15,31 +15,20 @@ from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, ra
 from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
 
-# ====================================================================================
-# Initial variables (specified in visual angles):
-boxSize = 4.47
-boxOffsetX = 6.71
-boxOffsetY = 4.97
-targVertOffset = 1.5
-nMaskElements = 4 # must be divisible by the number of directions allowed (below)
-maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
-# ====================================================================================
-
 # Ensure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'supreff'  # from the Builder filename that created this script
-expInfo = {u'session': u'01', u'domEye': u'r', u'participant': u''}
+expInfo = {u'session': u'001', u'participant': u''}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
 expInfo['expName'] = expName
 
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
-filename = _thisDir + os.sep + 'data\\%s_%s_%s_%s_%s' %(expName, 
-    expInfo['participant'], expInfo['domEye'], expInfo['session'], expInfo['date'])
+filename = _thisDir + os.sep + 'data/%s_%s_%s' %(expInfo['participant'], expName, expInfo['date'])
 
 # An ExperimentHandler isn't essential but helps with data saving
 thisExp = data.ExperimentHandler(name=expName, version='',
@@ -75,39 +64,29 @@ instrText = visual.TextStim(win=win, ori=0, name='instrText',
     color='white', colorSpace='rgb', opacity=1,
     depth=0.0)
 
-# Initial positions of the mask:
-maskInitPos = np.zeros((nMaskElements,2))
-
 # Initialize components for Routine "trial"
 trialClock = core.Clock()
-moveClock = core.Clock()
-maskMoveClock = core.Clock()
 windowLeft = visual.Rect(win=win, name='windowLeft',
     width=[boxSize, boxSize][0], height=[boxSize, boxSize][1],
     ori=0, pos=[-boxOffsetX, boxOffsetY],
-    lineWidth=2, lineColor=u'white', lineColorSpace='rgb',
-    fillColor=None, fillColorSpace='rgb',
-    opacity=1,
+    lineWidth=1, lineColor=u'white', lineColorSpace='rgb',
+    fillColor=u'black', fillColorSpace='rgb',
+    opacity=1,depth=0.0, 
 interpolate=True)
 windowRight = visual.Rect(win=win, name='windowRight',
     width=[boxSize, boxSize][0], height=[boxSize, boxSize][1],
     ori=0, pos=[boxOffsetX, boxOffsetY],
-    lineWidth=2, lineColor=u'white', lineColorSpace='rgb',
-    fillColor=None, fillColorSpace='rgb',
-    opacity=1,
+    lineWidth=1, lineColor=u'white', lineColorSpace='rgb',
+    fillColor=u'black', fillColorSpace='rgb',
+    opacity=1,depth=-1.0, 
 interpolate=True)
 ISI = core.StaticPeriod(win=win, screenHz=expInfo['frameRate'], name='ISI')
-# setting the edges to 3 (triangle) initially: this will change once the attributes are read from the configuration file:
 target = visual.Polygon(win=win, name='target',units='deg', 
-    edges = 3, size=[0.1, 0.1],
+    edges = 30, size=[targSize, targSize],
     ori=0, pos=[0, 0],
     lineWidth=1, lineColor=1.0, lineColorSpace='rgb',
     fillColor=1.0, fillColorSpace='rgb',
-    opacity=1, 
-interpolate=True)
-mask = visual.ElementArrayStim(win=win, name='mask', units='deg', fieldSize=(boxSize,boxSize),
-    fieldShape='sqr', colors=(1,1,1), colorSpace='rgb', opacities=1, fieldPos=[0,0], sizes=1, nElements=nMaskElements,
-    elementMask=None, elementTex=None, sfs=3, xys=maskInitPos,
+    opacity=1,depth=-3.0, 
 interpolate=True)
 
 # Create some handy timers
@@ -199,28 +178,6 @@ if thisTrial != None:
     for paramName in thisTrial.keys():
         exec(paramName + '= thisTrial.' + paramName)
 
-# ====================================================================================
-## Preparing the mask and the target.
-# Setting up the size specifications:
-target.size = [targSize, targSize] # target size
-mask.sizes = [maskSize, maskSize] # mask size
-# Target starting position (assuming that the target is always presented to the non-dominant eye):
-if expInfo['domEye'] == 'r': # if the dominant eye is right...
-    targOffsetX = -boxOffsetX
-    maskOffsetX = boxOffsetX
-elif expInfo['domEye'] == 'l': # if the dominant eye is left...
-    targOffsetX = boxOffsetX
-    maskOffsetX = -boxOffsetX
-# Maximum travel distance from the initial position:
-maxTravDist = (boxSize - targSize) / 2
-# Resetting the starting positions of mask elements (assuming that the mask is the same for every trial):
-maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
-# Picking a list of directions. If there are four allowed directions, one out of four needs to be picked for each element equally. [1 4 2 3 4 2 1 3...]
-maskDirectionNumReps = nMaskElements/np.shape(maskDirections)[0] # number of times to repeat the directions
-maskDirectionIndices = np.repeat(range(1,5), maskDirectionNumReps)
-maskDirs = np.random.permutation(np.repeat(maskDirections,maskDirectionNumReps,0))
-# ====================================================================================
-
 for thisTrial in trials:
     currentLoop = trials
     # abbreviate parameter names if possible (e.g. rgb = thisTrial.rgb)
@@ -232,13 +189,7 @@ for thisTrial in trials:
     t = 0
     trialClock.reset()  # clock 
     frameN = -1
-    # Vertical offset of the target (dependent on the type of trial):
-    if targLoc == 'above':
-        targOffsetY = boxOffsetY + targVertOffset
-    elif targLoc == 'below':
-        targOffsetY = boxOffsetY - targVertOffset
     # update component parameters for each repeat
-    target.edges = targVertices # updating the shape of the target
     target.setFillColor(targColour)
     target.setLineColor(targColour)
     key_upDown = event.BuilderKeyResponse()  # create an object of type KeyResponse
@@ -249,7 +200,6 @@ for thisTrial in trials:
     trialComponents.append(windowRight)
     trialComponents.append(ISI)
     trialComponents.append(target)
-    trialComponents.append(mask)
     trialComponents.append(key_upDown)
     for thisComponent in trialComponents:
         if hasattr(thisComponent, 'status'):
@@ -280,35 +230,6 @@ for thisTrial in trials:
             windowRight.setAutoDraw(True)
         if windowRight.status == STARTED and t >= (0.0 + (4.6-win.monitorFramePeriod*0.75)): #most of one frame period left
             windowRight.setAutoDraw(False)
-
-        # *mask* updates
-        if t >= 0 and mask.status == NOT_STARTED:
-            mask.tStart = t
-            mask.frameNStart = frameN
-            mask.xys = maskInitPos # setting the initial positions for the mask elements
-            print "maskOffsetX = " + str(maskOffsetX)
-            print "boxOffsetY = " + str(boxOffsetY)
-            mask.fieldPos = [maskOffsetX, boxOffsetY]
-            mask.setAutoDraw(True)
-            maskMovePos = maskInitPos
-            maskMoveClock.reset()
-        if mask.status == STARTED:
-            tMaskMove = maskMoveClock.getTime()
-#            maskMovePos = np.array(maskInitPos) + np.array(maskDirs) * maskSpeed * tMaskMove
-            maskMovePos = np.array(maskMovePos) + np.array(maskDirs) * maskSpeed * tMaskMove
-            maskElemsOutside = np.where(abs(maskMovePos)>maxTravDist)
-#            maskMovePos[maskElemsOutside] = 0
-            maskMovePos[maskElemsOutside] = -maxTravDist*maskMovePos[maskElemsOutside]/abs(maskMovePos[maskElemsOutside])
-#            maskMovePos[maskElemsOutside] = -maxTravDist*sum(maskDirs)
-#            print "===="
-#            print maxTravDist
-#            print maskMovePos
-#            maskMovePos[np.where(abs(maskMovePos)>maxTravDist)] = -maskMovePos[np.where(abs(maskMovePos)>maxTravDist)]
-#            maskMovePos[np.where(abs(maskMovePos)>maxTravDist)] *= -1
-#            print maskMovePos
-            mask.xys = maskMovePos
-        if mask.status == STARTED and t >= (0 + (4.6-win.monitorFramePeriod*0.75)):
-            mask.setAutoDraw(False)
         
         # *target* updates
         if t >= 1 and target.status == NOT_STARTED:
@@ -316,26 +237,6 @@ for thisTrial in trials:
             target.tStart = t  # underestimates by a little under one frame
             target.frameNStart = frameN  # exact frame index
             target.setAutoDraw(True)
-            edgeReached = False
-            moveClock.reset()
-        if target.status == STARTED:
-            tMove = moveClock.getTime()
-            if edgeReached: # if the edge is reached, start from the other edge:
-                travDist = tMove*targSpeed-maxTravDist
-            else: # otherwise, start from the middle of the box:
-                travDist = tMove*targSpeed
-            # if the target has already moved beyond max allowed travel distance:
-            if travDist > maxTravDist:
-                edgeReached = True
-                moveClock.reset() # reset the movement clock (set it to zero)
-                tMove = moveClock.getTime() # get the time
-                # use that reset time for new travDist, but start from the edge:
-                travDist = tMove*targSpeed-maxTravDist
-            # target movement:
-            if targDir == 'left':
-                target.pos = [targOffsetX-travDist, targOffsetY]
-            elif targDir == 'right':
-                target.pos = [targOffsetX+travDist, targOffsetY]
         if target.status == STARTED and t >= (1 + (3.6-win.monitorFramePeriod*0.75)): #most of one frame period left
             target.setAutoDraw(False)
         
