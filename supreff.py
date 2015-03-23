@@ -16,16 +16,23 @@ from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
 
 # ====================================================================================
-# Initial variables (specified in visual angles):
+## Initial variables (specified in visual angles):
+# Window boxes and black boxes:
 windowSize = 4.47
 windowOffsetX = 6.71
 windowOffsetY = 4.97
-targVertOffset = 1.5
-nMaskElements = 160 # must be divisible by the number of directions allowed (below)
-maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
 windowThickness = 2
+targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
+# Mask variables:
+nMaskElements = 160 # must be divisible by the number of directions allowed (below)
+maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
+# Timing variables:
+preStimInterval = 1
+stimDuration = 3.6
+ISIduration = 0.5
+fadeInNofFrames = 20 # the number of frames for the fade-in
 # ====================================================================================
 
 # Ensure that relative paths start from the same directory as this script
@@ -98,7 +105,8 @@ ISI = core.StaticPeriod(win=win, screenHz=expInfo['frameRate'], name='ISI')
 target = visual.Polygon(win=win, name='target',units='deg', edges = 3, size=[0.1, 0.1],
     ori=0, pos=[0, 0], lineWidth=1, lineColor=1.0, lineColorSpace='rgb',
     fillColor=1.0, fillColorSpace='rgb', opacity=1, interpolate=True)
-mask = visual.ElementArrayStim(win=win, name='mask', units='deg', fieldSize=(boxSize,boxSize),
+# field size needs to be changed later on in the code:
+mask = visual.ElementArrayStim(win=win, name='mask', units='deg', fieldSize=(windowSize,windowSize),
     fieldShape='sqr', colors=(1,1,1), colorSpace='rgb', opacities=1, fieldPos=[0,0], sizes=1,
     nElements=nMaskElements, elementMask=None, elementTex=None, sfs=3, xys=maskInitPos, interpolate=True)
 
@@ -198,13 +206,13 @@ target.size = [targSize, targSize] # target size
 mask.sizes = [maskSize, maskSize] # mask size
 # Target starting position (assuming that the target is always presented to the non-dominant eye):
 if expInfo['domEye'] == 'r': # if the dominant eye is right...
-    targOffsetX = -boxOffsetX
-    maskOffsetX = boxOffsetX
+    targOffsetX = -windowOffsetX
+    maskOffsetX = windowOffsetX
 elif expInfo['domEye'] == 'l': # if the dominant eye is left...
-    targOffsetX = boxOffsetX
-    maskOffsetX = -boxOffsetX
+    targOffsetX = windowOffsetX
+    maskOffsetX = -windowOffsetX
 # Maximum travel distance from the initial position:
-maxTravDist = (boxSize - targSize/1) / 2
+maxTravDist = (windowSize - targSize/1) / 2
 # Resetting the starting positions of mask elements (assuming that the mask is the same for every trial):
 maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
 # Picking a list of directions. If there are four allowed directions, one out of ...
@@ -236,9 +244,9 @@ for thisTrial in trials:
     tMaskMove = 0
     # Vertical offset of the target (dependent on the type of trial):
     if targLoc == 'above':
-        targOffsetY = boxOffsetY + targVertOffset
+        targOffsetY = windowOffsetY + targVertOffset
     elif targLoc == 'below':
-        targOffsetY = boxOffsetY - targVertOffset
+        targOffsetY = windowOffsetY - targVertOffset
     # update component parameters for each repeat
     target.edges = targVertices # updating the shape of the target
     target.setFillColor(targColour)
@@ -266,29 +274,33 @@ for thisTrial in trials:
         # update/draw components on each frame
         
         # *windowLeft* updates
-        if t >= 0.0 and windowLeft.status == NOT_STARTED:
+        if windowLeft.status == NOT_STARTED:
             # keep track of start time/frame for later
             windowLeft.tStart = t  # underestimates by a little under one frame
             windowLeft.frameNStart = frameN  # exact frame index
             windowLeft.setAutoDraw(True)
-        if windowLeft.status == STARTED and t >= (0.0 + (4.6-win.monitorFramePeriod*0.75)):
+            blackBoxLeft.setAutoDraw(True)
+        if windowLeft.status == STARTED and t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
             windowLeft.setAutoDraw(False)
+            blackBoxLeft.setAutoDraw(False)
         
         # *windowRight* updates
-        if t >= 0.0 and windowRight.status == NOT_STARTED:
+        if windowRight.status == NOT_STARTED:
             # keep track of start time/frame for later
             windowRight.tStart = t  # underestimates by a little under one frame
             windowRight.frameNStart = frameN  # exact frame index
             windowRight.setAutoDraw(True)
-        if windowRight.status == STARTED and t >= (0.0 + (4.6-win.monitorFramePeriod*0.75)):
+            blackBoxRight.setAutoDraw(True)
+        if windowRight.status == STARTED and t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
             windowRight.setAutoDraw(False)
+            blackBoxRight.setAutoDraw(False)
 
         # *mask* updates
-        if t >= 0 and mask.status == NOT_STARTED:
+        if mask.status == NOT_STARTED:
             mask.tStart = t
             mask.frameNStart = frameN
             mask.xys = maskInitPos # setting the initial positions for the mask elements
-            mask.fieldPos = [maskOffsetX, boxOffsetY]
+            mask.fieldPos = [maskOffsetX, windowOffsetY]
             mask.setAutoDraw(True)
             maskMoveClock.reset()
         if mask.status == STARTED and t>0.5:
@@ -303,11 +315,11 @@ for thisTrial in trials:
             maskElemsOutside = np.where(abs(maskMovePos)>maxTravDist)
             maskMovePos[maskElemsOutside] = -maxTravDist*maskMovePos[maskElemsOutside]/abs(maskMovePos[maskElemsOutside])
             mask.xys = maskMovePos
-        if mask.status == STARTED and t >= (0 + (4.6-win.monitorFramePeriod*0.75)):
+        if mask.status == STARTED and t >= (0 + (preStimInterval+stimDuration-win.monitorFramePeriod*0.75)):
             mask.setAutoDraw(False)
         
         # *target* updates
-        if t >= 1 and target.status == NOT_STARTED:
+        if t >= preStimInterval and target.status == NOT_STARTED:
             # keep track of start time/frame for later
             target.tStart = t  # underestimates by a little under one frame
             target.frameNStart = frameN  # exact frame index
@@ -315,6 +327,11 @@ for thisTrial in trials:
             edgeReached = False
             moveClock.reset()
         if target.status == STARTED:
+            curFrameN = frameN - target.frameNStart
+            if curFrameN < fadeInNofFrames:
+                target.opacity = curFrameN / fadeInNofFrames
+            else:
+                target.opacity = 1
             tMove = moveClock.getTime()
             if edgeReached: # if the edge is reached, start from the other edge:
                 travDist = tMove*targSpeed-maxTravDist
@@ -332,11 +349,11 @@ for thisTrial in trials:
                 target.pos = [targOffsetX-travDist, targOffsetY]
             elif targDir == 'right':
                 target.pos = [targOffsetX+travDist, targOffsetY]
-        if target.status == STARTED and t >= (1 + (3.6-win.monitorFramePeriod*0.75)): #most of one frame period left
+        if target.status == STARTED and t >= (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75)):
             target.setAutoDraw(False)
         
         # *key_upDown* updates
-        if t >= 1 and key_upDown.status == NOT_STARTED:
+        if t >= preStimInterval and key_upDown.status == NOT_STARTED:
             # keep track of start time/frame for later
             key_upDown.tStart = t  # underestimates by a little under one frame
             key_upDown.frameNStart = frameN  # exact frame index
@@ -361,11 +378,11 @@ for thisTrial in trials:
                 # a response ends the routine
                 continueRoutine = False
         # *ISI* period
-        if t >= 0.0 and ISI.status == NOT_STARTED:
+        if ISI.status == NOT_STARTED:
             # keep track of start time/frame for later
             ISI.tStart = t  # underestimates by a little under one frame
             ISI.frameNStart = frameN  # exact frame index
-            ISI.start(0.5)
+            ISI.start(ISIduration)
         elif ISI.status == STARTED: #one frame should pass before updating params and completing
             ISI.complete() #finish the static period
         
