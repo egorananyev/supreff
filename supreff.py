@@ -10,7 +10,7 @@ If you publish work using this script please cite the relevant PsychoPy publicat
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
 from psychopy import visual, core, data, event, logging, sound, gui
 from psychopy.constants import *  # things like STARTED, FINISHED
-import numpy as np  # whole numpy lib is available, prepend 'np.'
+import numpy as np # whole numpy lib is available, prepend 'np.'
 from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, rad2deg, linspace, asarray
 from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
@@ -18,9 +18,9 @@ import os  # handy system and path functions
 # ====================================================================================
 ## Initial variables (specified in visual angles):
 # Window boxes and black boxes:
-windowSize = 4.47
-windowOffsetX = 6.71
-windowOffsetY = 4.97
+windowSize = 5.03 # 4.47
+windowOffsetX = 5.62 # 6.71
+windowOffsetY = 2.83 # 4.97
 windowThickness = 2
 targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
