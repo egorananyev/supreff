@@ -42,7 +42,7 @@ os.chdir(_thisDir)
 # Store info about the experiment session
 expName = 'supreff'  # from the Builder filename that created this script
 expInfo = {u'session': u'01', u'domEye': u'r', u'participant': u''}
-dlg = gui.DlgFromDict(dictionary=expInfo, title=expName)
+dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
 expInfo['date'] = data.getDateStr()  # add a simple timestamp
 expInfo['expName'] = expName
@@ -228,6 +228,9 @@ maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
 maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps,0)
 maskColours = np.random.permutation(maskColCurSetRepd)
 mask.colors = maskColours
+# Setting up the staircases.
+NofConds = np.shape(data.importConditions('cond-expt01.csv'))[0] # number of conditions
+
 # ====================================================================================
 
 for thisTrial in trials:
@@ -247,6 +250,8 @@ for thisTrial in trials:
         targOffsetY = windowOffsetY + targVertOffset
     elif targLoc == 'below':
         targOffsetY = windowOffsetY - targVertOffset
+    else:
+        print 'Error! Please check your target location values.'
     # update component parameters for each repeat
     target.edges = targVertices # updating the shape of the target
     target.setFillColor(targColour)
