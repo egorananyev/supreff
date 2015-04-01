@@ -15,9 +15,9 @@ from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, ra
 from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
 
-# ==========================================================================================
-## Initial variables (specified in visual angles):
-# Window boxes and black boxes:
+# =====================================================================================
+## Initial variables.
+# Window boxes and black boxes (specified in degrees of visual angles [dva]):
 windowSize = 5.03 # 4.47
 windowOffsetX = 5.62 # 6.71
 windowOffsetY = 2.83 # 4.97
@@ -28,12 +28,13 @@ blackBoxThickness = 10
 # Mask variables:
 nMaskElements = 160 # must be divisible by the number of directions allowed (below)
 maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
-# Timing variables:
+# Timing variables (in seconds) and trial number:
 preStimInterval = 1
-stimDuration = 3.6
-ISIduration = 0.5
+stimDuration = 2 # 3.6s in the Moors paper
+ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
-# ==========================================================================================
+nTrialsPerCond = 30
+# =====================================================================================
 
 # Ensure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
@@ -194,9 +195,8 @@ for thisComponent in instructionsComponents:
         thisComponent.setAutoDraw(False)
 
 # set up handler to look after randomisation of conditions etc
-trials = data.TrialHandler(nReps=4, method='random', 
-    extraInfo=expInfo, originPath=None,
-    trialList=data.importConditions('cond-expt01.csv'),
+trials = data.TrialHandler(nReps=nTrialsPerCond , method='random', extraInfo=expInfo, 
+    originPath=None, trialList=data.importConditions('cond-expt01.csv'),
     seed=None, name='trials')
 thisExp.addLoop(trials)  # add the loop to the experiment
 thisTrial = trials.trialList[0]  # so we can initialise stimuli with some values
@@ -205,7 +205,7 @@ if thisTrial != None:
     for paramName in thisTrial.keys():
         exec(paramName + '= thisTrial.' + paramName)
 
-# ==========================================================================================
+# =====================================================================================
 ## Preparing the mask and the target.
 # Setting up the size specifications:
 target.size = [targSize, targSize] # target size
@@ -219,11 +219,9 @@ elif expInfo['domEye'] == 'l': # if the dominant eye is left...
     maskOffsetX = -windowOffsetX
 # Maximum travel distance from the initial position:
 maxTravDist = (windowSize - targSize/1) / 2
-# Resetting the starting positions of mask elements (assuming that the mask is the same for 
-# ... every trial):
+# Resetting the starting positions of mask elements (assuming that the mask is the same for every trial):
 maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
-# Picking a list of directions. If there are four allowed directions, one out of ...
-# ... four needs to be picked for each element equally. [1 4 2 3 4 2 1 3...]
+# Picking a list of directions. If there are four allowed directions, one out of four needs to be picked for each element equally. [1 4 2 3 4 2 1 3...]
 maskDirectionNumReps = nMaskElements/np.shape(maskDirections)[0] # number of times to repeat the directions
 maskDirectionIndices = np.repeat(range(1,5), maskDirectionNumReps)
 maskDirs = np.random.permutation(np.repeat(maskDirections,maskDirectionNumReps,0))
@@ -232,13 +230,21 @@ maskColIDs = np.array([maskColRed, maskColBlue, maskColGreen, maskColYellow])
 maskColAll = np.array([[1,-1,-1], [-1,-1,1], [-1,1,-1], [1,1,-1]])
 maskColCurSet = maskColAll[maskColIDs==1]
 maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
-maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps,0)
+maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps, 0)
 maskColours = np.random.permutation(maskColCurSetRepd)
 mask.colors = maskColours
 # Setting up the staircases.
-NofConds = np.shape(data.importConditions('cond-expt01.csv'))[0] # number of conditions
-
-# ==========================================================================================
+#NofConds = np.shape(data.importConditions('cond-expt01.csv'))[0] # number of conditions
+# The target directions and starting positions must be random:
+nConditions = trials.nTotal/trials.nReps
+targDirAll = (np.random.randint(2,size=nTrialsPerCond)*2-1) # -1=left, +1=right
+print targDirAll
+targDirAll = np.repeat(targDirAll, nConditions, 0)
+targDirAll = np.random.permutation(targDirAll)
+print targDirAll
+targInitPos = (np.random.rand(nTrialsPerCond)*2-1)*maxTravDist
+nTrial = 0
+# =====================================================================================
 
 for thisTrial in trials:
     currentLoop = trials
@@ -252,6 +258,8 @@ for thisTrial in trials:
     trialClock.reset()  # clock 
     frameN = -1
     tMaskMove = 0
+    targDir = targDirAll[nTrial] # np.random.randint(2)*2-1 # -1=left; +1=right
+    nTrial += 1
     # Vertical offset of the target (dependent on the type of trial):
     if targLoc == 'above':
         targOffsetY = windowOffsetY + targVertOffset
@@ -357,10 +365,11 @@ for thisTrial in trials:
                 # use that reset time for new travDist, but start from the edge:
                 travDist = tMove*targSpeed-maxTravDist
             # target movement:
-            if targDir == 'left':
-                target.pos = [targOffsetX-travDist, targOffsetY]
-            elif targDir == 'right':
-                target.pos = [targOffsetX+travDist, targOffsetY]
+            target.pos = [targOffsetX+targDir*travDist, targOffsetY]
+#            if targDir == 'left':
+#                target.pos = [targOffsetX-travDist, targOffsetY]
+#            elif targDir == 'right':
+#                target.pos = [targOffsetX+travDist, targOffsetY]
         if target.status == STARTED and t >= (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75)):
             target.setAutoDraw(False)
         
