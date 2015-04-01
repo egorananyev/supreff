@@ -33,7 +33,7 @@ preStimInterval = 1
 stimDuration = 2 # 3.6s in the Moors paper
 ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
-nTrialsPerCond = 30
+nTrialsPerStair = 30
 # =====================================================================================
 
 # Ensure that relative paths start from the same directory as this script
@@ -89,21 +89,25 @@ maskInitPos = np.zeros((nMaskElements,2))
 trialClock = core.Clock()
 moveClock = core.Clock()
 maskMoveClock = core.Clock()
-windowLeft = visual.Rect(win=win, name='windowLeft', width=[windowSize, windowSize][0], 
-    height=[windowSize, windowSize][1], ori=0, pos=[-windowOffsetX, windowOffsetY], 
-    lineWidth=windowThickness, lineColor=u'white', lineColorSpace='rgb', fillColor=None, 
-    opacity=1, interpolate=True)
-windowRight = visual.Rect(win=win, name='windowRight', width=[windowSize, windowSize][0], 
-    height=[windowSize, windowSize][1], ori=0, pos=[windowOffsetX, windowOffsetY], 
-    lineWidth=windowThickness, lineColor=u'white', lineColorSpace='rgb', fillColor=None, 
-    opacity=1, interpolate=True)
+windowLeft = visual.Rect(win=win, name='windowLeft', width=[windowSize, 
+    windowSize][0], height=[windowSize, windowSize][1], ori=0, 
+    pos=[-windowOffsetX, windowOffsetY], 
+    lineWidth=windowThickness, lineColor=u'white', lineColorSpace='rgb', 
+    fillColor=None, opacity=1, interpolate=True)
+windowRight = visual.Rect(win=win, name='windowRight', width=[windowSize, 
+    windowSize][0], height=[windowSize, windowSize][1], ori=0, 
+    pos=[windowOffsetX, windowOffsetY], lineWidth=windowThickness, 
+    lineColor=u'white', lineColorSpace='rgb', 
+    fillColor=None, opacity=1, interpolate=True)
 blackBoxLeft = visual.Rect(win=win, name='blackBoxLeft', width=[blackBoxSize, 
     blackBoxSize][0], height=[blackBoxSize, blackBoxSize][1], ori=0, 
-    pos=[-windowOffsetX, windowOffsetY], lineWidth=blackBoxThickness, lineColor=u'black', 
+    pos=[-windowOffsetX, windowOffsetY], lineWidth=blackBoxThickness, 
+    lineColor=u'black', 
     lineColorSpace='rgb', fillColor=None, opacity=1, interpolate=True)
 blackBoxRight = visual.Rect(win=win, name='blackBoxRight', width=[blackBoxSize, 
     blackBoxSize][0], height=[blackBoxSize, blackBoxSize][1], ori=0, 
-    pos=[windowOffsetX, windowOffsetY], lineWidth=blackBoxThickness, lineColor=u'black', 
+    pos=[windowOffsetX, windowOffsetY], lineWidth=blackBoxThickness, 
+    lineColor=u'black', 
     lineColorSpace='rgb', fillColor=None, opacity=1, interpolate=True)
 ISI = core.StaticPeriod(win=win, screenHz=expInfo['frameRate'], name='ISI')
 # setting the edges to 3 (triangle) initially: this will change once ...
@@ -113,9 +117,14 @@ target = visual.Polygon(win=win, name='target',units='deg', edges = 3, size=[0.1
     fillColor=1.0, fillColorSpace='rgb', opacity=1, interpolate=True)
 # field size needs to be changed later on in the code:
 mask = visual.ElementArrayStim(win=win, name='mask', units='deg', 
-    fieldSize=(windowSize,windowSize), fieldShape='sqr', colors=(1,1,1), colorSpace='rgb', 
-    opacities=1, fieldPos=[0,0], sizes=1, nElements=nMaskElements, elementMask=None, 
-    elementTex=None, sfs=3, xys=maskInitPos, interpolate=True)
+    fieldSize=(windowSize,windowSize), fieldShape='sqr', colors=(1,1,1), 
+    colorSpace='rgb', opacities=1, fieldPos=[0,0], sizes=1, nElements=nMaskElements, 
+    elementMask=None, elementTex=None, sfs=3, xys=maskInitPos, interpolate=True)
+# fixation crosses:
+fixationLeft = visual.GratingStim(win, name='fixationLeft', color='white', 
+    tex=None, mask='circle', size=0.2, pos=[-windowOffsetX, windowOffsetY])
+fixationRight = visual.GratingStim(win, name='fixationRight', color='white', 
+    tex=None, mask='circle', size=0.2, pos=[windowOffsetX, windowOffsetY])
 
 # Create some handy timers
 globalClock = core.Clock()  # to track the time since experiment started
@@ -194,22 +203,22 @@ for thisComponent in instructionsComponents:
     if hasattr(thisComponent, "setAutoDraw"):
         thisComponent.setAutoDraw(False)
 
-# set up handler to look after randomisation of conditions etc
-trials = data.TrialHandler(nReps=nTrialsPerCond , method='random', extraInfo=expInfo, 
-    originPath=None, trialList=data.importConditions('cond-expt01.csv'),
-    seed=None, name='trials')
-thisExp.addLoop(trials)  # add the loop to the experiment
-thisTrial = trials.trialList[0]  # so we can initialise stimuli with some values
-# abbreviate parameter names if possible (e.g. rgb=thisTrial.rgb)
-if thisTrial != None:
-    for paramName in thisTrial.keys():
-        exec(paramName + '= thisTrial.' + paramName)
+# # set up handler to look after randomisation of conditions etc
+# trials = data.TrialHandler(nReps=nTrialsPerCond , method='random', extraInfo=expInfo, 
+    # originPath=None, trialList=data.importConditions('cond-expt01.csv'),
+    # seed=None, name='trials')
+# thisExp.addLoop(trials)  # add the loop to the experiment
+# thisTrial = trials.trialList[0]  # so we can initialise stimuli with some values
+# # abbreviate parameter names if possible (e.g. rgb=thisTrial.rgb)
+# if thisTrial != None:
+    # for paramName in thisTrial.keys():
+        # exec(paramName + '= thisTrial.' + paramName)
+stairs = data.MultiStairHandler(conditions = data.importConditions('cond-expt01.csv'),
+    nTrials = nTrialsPerStair, method='random')
+print stairs.conditions
 
 # =====================================================================================
 ## Preparing the mask and the target.
-# Setting up the size specifications:
-target.size = [targSize, targSize] # target size
-mask.sizes = [maskSize, maskSize] # mask size
 # Target starting position (assuming that the target is always presented to the non-dominant eye):
 if expInfo['domEye'] == 'r': # if the dominant eye is right...
     targOffsetX = -windowOffsetX
@@ -217,41 +226,58 @@ if expInfo['domEye'] == 'r': # if the dominant eye is right...
 elif expInfo['domEye'] == 'l': # if the dominant eye is left...
     targOffsetX = windowOffsetX
     maskOffsetX = -windowOffsetX
-# Maximum travel distance from the initial position:
-maxTravDist = (windowSize - targSize/1) / 2
-# Resetting the starting positions of mask elements (assuming that the mask is the same for every trial):
-maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
-# Picking a list of directions. If there are four allowed directions, one out of four needs to be picked for each element equally. [1 4 2 3 4 2 1 3...]
-maskDirectionNumReps = nMaskElements/np.shape(maskDirections)[0] # number of times to repeat the directions
-maskDirectionIndices = np.repeat(range(1,5), maskDirectionNumReps)
-maskDirs = np.random.permutation(np.repeat(maskDirections,maskDirectionNumReps,0))
-# Setting the mask colours.
-maskColIDs = np.array([maskColRed, maskColBlue, maskColGreen, maskColYellow])
-maskColAll = np.array([[1,-1,-1], [-1,-1,1], [-1,1,-1], [1,1,-1]])
-maskColCurSet = maskColAll[maskColIDs==1]
-maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
-maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps, 0)
-maskColours = np.random.permutation(maskColCurSetRepd)
-mask.colors = maskColours
 # Setting up the staircases.
 #NofConds = np.shape(data.importConditions('cond-expt01.csv'))[0] # number of conditions
 # The target directions and starting positions must be random:
-nConditions = trials.nTotal/trials.nReps
-targDirAll = (np.random.randint(2,size=nTrialsPerCond)*2-1) # -1=left, +1=right
-print targDirAll
+print np.size(stairs)
+nConditions = np.size(stairs)
+targDirAll = (np.random.randint(2,size=nTrialsPerStair)*2-1) # -1=left, +1=right
 targDirAll = np.repeat(targDirAll, nConditions, 0)
 targDirAll = np.random.permutation(targDirAll)
-print targDirAll
-targInitPos = (np.random.rand(nTrialsPerCond)*2-1)*maxTravDist
+targInitPos = (np.random.rand(nTrialsPerStair)*2-1) # note that this is NOT YET multiplied by the max travel distance
 nTrial = 0
 # =====================================================================================
 
-for thisTrial in trials:
-    currentLoop = trials
-    # abbreviate parameter names if possible (e.g. rgb = thisTrial.rgb)
-    if thisTrial != None:
-        for paramName in thisTrial.keys():
-            exec(paramName + '= thisTrial.' + paramName)
+for thisIntensity, thisCondition in stairs:
+    thisTargSize = thisCondition['targSize']
+    thisTargLoc = thisCondition['targLoc']
+    thisTargVertices = thisCondition['targVertices']
+    thisTargSpeed = thisCondition['targSpeed']
+    thisTargColour = thisCondition['targColour']
+    thisTargCorrAns = thisCondition['targCorrAns']
+    thisMaskVertices = thisCondition['maskVertices']
+    thisMaskSize = thisCondition['maskSize']
+    thisMaskSpeed = thisCondition['maskSpeed']
+    thisMaskColRed = thisCondition['maskColRed']
+    thisMaskColGreen = thisCondition['maskColGreen']
+    thisMaskColYellow = thisCondition['maskColYellow']
+    thisMaskColBlue = thisCondition['maskColBlue']
+    thisMaskColGrey = thisCondition['maskColGrey']
+    # Setting up the size specifications:
+    target.size = [thisTargSize, thisTargSize] # target size
+    mask.sizes = [thisMaskSize, thisMaskSize] # mask size
+    # Maximum travel distance from the initial position:
+    maxTravDist = (windowSize - thisTargSize/1) / 2
+    # Resetting the starting positions of mask elements (assuming that the mask is different for every trial):
+    maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
+    # Picking a list of directions. If there are four allowed directions, one out of four needs to be picked for each element equally. [1 4 2 3 4 2 1 3...]
+    maskDirectionNumReps = nMaskElements/np.shape(maskDirections)[0] # number of times to repeat the directions
+    maskDirectionIndices = np.repeat(range(1,5), maskDirectionNumReps)
+    maskDirs = np.random.permutation(np.repeat(maskDirections,maskDirectionNumReps,0))
+    # Setting the mask colours.
+    maskColIDs = np.array([thisMaskColRed, thisMaskColBlue, thisMaskColGreen,
+        thisMaskColYellow])
+    maskColAll = np.array([[1,-1,-1], [-1,-1,1], [-1,1,-1], [1,1,-1]])
+    maskColCurSet = maskColAll[maskColIDs==1]
+    maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
+    maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps, 0)
+    maskColours = np.random.permutation(maskColCurSetRepd)
+    mask.colors = maskColours
+#    currentLoop = trials
+#    # abbreviate parameter names if possible (e.g. rgb = thisTrial.rgb)
+#    if thisTrial != None:
+#        for paramName in thisTrial.keys():
+#            exec(paramName + '= thisTrial.' + paramName)
     
     #------Prepare to start Routine "trial"-------
     t = 0
@@ -261,16 +287,16 @@ for thisTrial in trials:
     targDir = targDirAll[nTrial] # np.random.randint(2)*2-1 # -1=left; +1=right
     nTrial += 1
     # Vertical offset of the target (dependent on the type of trial):
-    if targLoc == 'above':
+    if thisTargLoc == 'above':
         targOffsetY = windowOffsetY + targVertOffset
-    elif targLoc == 'below':
+    elif thisTargLoc == 'below':
         targOffsetY = windowOffsetY - targVertOffset
     else:
         print 'Error! Please check your target location values.'
     # update component parameters for each repeat
-    target.edges = targVertices # updating the shape of the target
-    target.setFillColor(targColour)
-    target.setLineColor(targColour)
+    target.edges = thisTargVertices # updating the shape of the target
+    target.setFillColor(thisTargColour)
+    target.setLineColor(thisTargColour)
     key_upDown = event.BuilderKeyResponse()  # create an object of type KeyResponse
     key_upDown.status = NOT_STARTED
     # keep track of which components have finished
@@ -280,6 +306,8 @@ for thisTrial in trials:
     trialComponents.append(ISI)
     trialComponents.append(target)
     trialComponents.append(mask)
+    trialComponents.append(fixationLeft)
+    trialComponents.append(fixationRight)
     trialComponents.append(key_upDown)
     for thisComponent in trialComponents:
         if hasattr(thisComponent, 'status'):
@@ -299,9 +327,11 @@ for thisTrial in trials:
             windowLeft.tStart = t  # underestimates by a little under one frame
             windowLeft.frameNStart = frameN  # exact frame index
             windowLeft.setAutoDraw(True)
+            fixationLeft.setAutoDraw(True)
             blackBoxLeft.setAutoDraw(True)
         if windowLeft.status == STARTED and t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
             windowLeft.setAutoDraw(False)
+            fixationLeft.setAutoDraw(False)
             blackBoxLeft.setAutoDraw(False)
         
         # *windowRight* updates
@@ -310,16 +340,19 @@ for thisTrial in trials:
             windowRight.tStart = t  # underestimates by a little under one frame
             windowRight.frameNStart = frameN  # exact frame index
             windowRight.setAutoDraw(True)
+            fixationRight.setAutoDraw(True)
             blackBoxRight.setAutoDraw(True)
         if windowRight.status == STARTED and t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
             windowRight.setAutoDraw(False)
+            fixationRight.setAutoDraw(False)
             blackBoxRight.setAutoDraw(False)
 
         # *mask* updates
         if mask.status == NOT_STARTED:
             mask.tStart = t
             mask.frameNStart = frameN
-            mask.xys = maskInitPos # setting the initial positions for the mask elements
+            # setting the initial positions for the mask elements
+            mask.xys = maskInitPos 
             mask.fieldPos = [maskOffsetX, windowOffsetY]
             mask.setAutoDraw(True)
             maskMoveClock.reset()
@@ -331,12 +364,14 @@ for thisTrial in trials:
             else:
                 tMaskMove = maskMoveClock.getTime() - tMaskRec
                 tMaskRec = maskMoveClock.getTime()
-            maskMovePos = np.array(maskMovePos) + np.array(maskDirs) * maskSpeed * tMaskMove
+            maskMovePos = np.array(maskMovePos) + np.array(maskDirs) * thisMaskSpeed * tMaskMove
             maskElemsOutside = np.where(abs(maskMovePos)>maxTravDist)
-            maskMovePos[maskElemsOutside] = -maxTravDist*maskMovePos[maskElemsOutside]/abs(maskMovePos[maskElemsOutside])
+            maskMovePos[maskElemsOutside] = -maxTravDist*maskMovePos[maskElemsOutside]/ abs(maskMovePos[maskElemsOutside])
             mask.xys = maskMovePos
-        if mask.status == STARTED and t >= (0 + (preStimInterval+stimDuration-win.monitorFramePeriod*0.75)):
+        if mask.status == STARTED and t >= (0 + (preStimInterval+stimDuration-
+                win.monitorFramePeriod*0.75)):
             mask.setAutoDraw(False)
+
         
         # *target* updates
         if t >= preStimInterval and target.status == NOT_STARTED:
@@ -354,23 +389,24 @@ for thisTrial in trials:
                 target.opacity = 1
             tMove = moveClock.getTime()
             if edgeReached: # if the edge is reached, start from the other edge:
-                travDist = tMove*targSpeed-maxTravDist
+                travDist = tMove*thisTargSpeed-maxTravDist
             else: # otherwise, start from the middle of the box:
-                travDist = tMove*targSpeed
+                travDist = tMove*thisTargSpeed
             # if the target has already moved beyond max allowed travel distance:
             if travDist > maxTravDist:
                 edgeReached = True
                 moveClock.reset() # reset the movement clock (set it to zero)
                 tMove = moveClock.getTime() # get the time
                 # use that reset time for new travDist, but start from the edge:
-                travDist = tMove*targSpeed-maxTravDist
+                travDist = tMove*thisTargSpeed-maxTravDist
             # target movement:
             target.pos = [targOffsetX+targDir*travDist, targOffsetY]
 #            if targDir == 'left':
 #                target.pos = [targOffsetX-travDist, targOffsetY]
 #            elif targDir == 'right':
 #                target.pos = [targOffsetX+travDist, targOffsetY]
-        if target.status == STARTED and t >= (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75)):
+        if target.status == STARTED and t >= (preStimInterval + 
+                (stimDuration-win.monitorFramePeriod*0.75)):
             target.setAutoDraw(False)
         
         # *key_upDown* updates
@@ -392,7 +428,7 @@ for thisTrial in trials:
                 key_upDown.keys = theseKeys[-1]  # just the last key pressed
                 key_upDown.rt = key_upDown.clock.getTime()
                 # was this 'correct'?
-                if (key_upDown.keys == str(targCorrAns)) or (key_upDown.keys == targCorrAns):
+                if (key_upDown.keys == str(thisTargCorrAns)) or (key_upDown.keys == thisTargCorrAns):
                     key_upDown.corr = 1
                 else:
                     key_upDown.corr = 0
@@ -404,14 +440,16 @@ for thisTrial in trials:
             ISI.tStart = t  # underestimates by a little under one frame
             ISI.frameNStart = frameN  # exact frame index
             ISI.start(ISIduration)
-        elif ISI.status == STARTED: #one frame should pass before updating params and completing
+        #one frame should pass before updating params and completing
+        elif ISI.status == STARTED: 
             ISI.complete() #finish the static period
         
         # check if all components have finished
         if not continueRoutine:  # a component has requested a forced-end of Routine
             routineTimer.reset()  # if we abort early the non-slip timer needs reset
             break
-        continueRoutine = False  # will revert to True if at least one component still running
+        # will revert to True if at least one component still running
+        continueRoutine = False  
         for thisComponent in trialComponents:
             if hasattr(thisComponent, "status") and thisComponent.status != FINISHED:
                 continueRoutine = True
@@ -422,7 +460,8 @@ for thisTrial in trials:
             core.quit()
         
         # refresh the screen
-        if continueRoutine:  # don't flip if this routine is over or we'll get a blank screen
+        # don't flip if this routine is over or we'll get a blank screen
+        if continueRoutine:  
             win.flip()
         else:  # this Routine was not non-slip safe so reset non-slip timer
             routineTimer.reset()
