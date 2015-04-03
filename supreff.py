@@ -15,6 +15,14 @@ from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, ra
 from numpy.random import random, randint, normal, shuffle
 import os  # handy system and path functions
 import itertools
+import shutil
+
+import pyglet
+allScrs = pyglet.window.get_platform().get_default_display().get_screens()
+print allScrs
+
+# mainWin = visual.Window([1680,1050], units='norm', fullscr=True, screen=0) 
+# secondWin = visual.Window([1680,1050], units='norm', fullscr=True, screen=1) 
 
 # ====================================================================================
 ## Initial variables.
@@ -35,12 +43,14 @@ stimDuration = 2 # 3.6s in the Moors paper
 ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
-nTrialsPerStair = 6 # 30
+nTrialsPerStair = 18 # 30
 contrMin = 0
 contrMax = 1
 # Other variables:
+conditionsFileName = 'cond-expt01.csv'
+#conditionsFileName = 'cond-expt01-partial.csv'
 contrSteps = [0.3, 0.3, 0.2, 0.2, 0.1, 0.1, 0.05, 0.05, 0.03, 0.03]
-targInitPosAll = [-0.5, 0, 0.5] # multiplier for starting target position along x-axis
+targInitPosAll = [-1, 0, 1] # multiplier for starting target position along x-axis
 # ====================================================================================
 
 # Ensure that relative paths start from the same directory as this script
@@ -72,7 +82,7 @@ endExpNow = False  # flag for 'escape' or other condition => quit the exp
 # Start Code - component code to be run before the window creation
 
 # Setup the Window
-win = visual.Window(size=(1920, 1080), fullscr=True, screen=0, allowGUI=False, 
+win = visual.Window(size=(1680, 1050), fullscr=False, screen=1, allowGUI=False, 
     allowStencil=False, monitor='testMonitor', color='black', colorSpace='rgb', 
     blendMode='avg', useFBO=True, units='deg')
 # store frame rate of monitor if we can measure it successfully
@@ -211,7 +221,7 @@ for thisComponent in instructionsComponents:
         thisComponent.setAutoDraw(False)
 
 # Setting up the staircases.
-stairConds = data.importConditions('cond-expt01-partial.csv')
+stairConds = data.importConditions(conditionsFileName)
 # print stairConds
 nConditions = np.size(stairConds)
 print "number of conditions: " + str(nConditions)
@@ -234,9 +244,9 @@ targInitPos = (np.random.rand(nTrialsPerStair)*2-1)
 
 # Creating combinations of directions and starting positions of the target:
 combi_dirXpos = list(itertools.product(*[[-1,1],targInitPosAll]))
-print combi_dirXpos
+#print combi_dirXpos
 nCombiReps = nTrialsPerStair / np.shape(combi_dirXpos)[0]
-print nCombiReps
+#print nCombiReps
 # Setting up each staircase, one by one:
 stairs=[] # setting up a variable containing all our staircases
 for thisCondition in stairConds:
@@ -247,8 +257,16 @@ for thisCondition in stairConds:
     thisCondition['combi_dirXpos'] = thisCombi_dirXpos
     thisStair = data.StairHandler(startVal = thisCondition['startVal'],
         extraInfo = thisCondition, nTrials=nTrialsPerStair, nUp=1, nDown=2,
-        minVal = contrMin, maxVal = contrMax, stepSizes = contrSteps)
+        minVal = contrMin, maxVal = contrMax, stepSizes = contrSteps, stepType='lin')
+    thisStair.setExp(thisExp)
     stairs.append(thisStair)
+# Printing the attributes of the stairs:  
+print dir(stairs[0])
+# Creating a directory for storing staircase outputs:
+if not os.path.exists(filename):
+    os.makedirs(filename)
+# Creating a copy of the Conditions file for book-keeping and analyses:
+shutil.copyfile(conditionsFileName, filename + os.sep + conditionsFileName)
 # ====================================================================================
 
 for trialN in range(nTrialsPerStair):
@@ -275,7 +293,7 @@ for trialN in range(nTrialsPerStair):
         thisMaskColGrey = thisStair.extraInfo['maskColGrey']
         # What changes from trial to trial (will be different for dif expts)?
         print '### Trial ' + str(trialN) + ' ###'
-        print 'thisIntensity (contrast): start=%.2f, current=%.2f' \
+        print 'thisIntensity (contrast): start=%.2f, current=%.3f' \
             %(thisStair.extraInfo['startVal'], thisIntensity)
         print 'thisTargLoc: ' + str(thisTargLoc)
         print 'thisMaskSpeed: ' + str(thisMaskSpeed)
@@ -357,11 +375,11 @@ for trialN in range(nTrialsPerStair):
                 windowLeft.setAutoDraw(True)
                 fixationLeft.setAutoDraw(True)
                 blackBoxLeft.setAutoDraw(True)
-            if windowLeft.status == STARTED and \
-                    t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
-                windowLeft.setAutoDraw(False)
-                fixationLeft.setAutoDraw(False)
-                blackBoxLeft.setAutoDraw(False)
+#            if windowLeft.status == STARTED and \
+#                    t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
+#                windowLeft.setAutoDraw(False)
+#                fixationLeft.setAutoDraw(False)
+#                blackBoxLeft.setAutoDraw(False)
             
             # *windowRight* updates
             if windowRight.status == NOT_STARTED:
@@ -371,11 +389,11 @@ for trialN in range(nTrialsPerStair):
                 windowRight.setAutoDraw(True)
                 fixationRight.setAutoDraw(True)
                 blackBoxRight.setAutoDraw(True)
-            if windowRight.status == STARTED and \
-                    t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
-                windowRight.setAutoDraw(False)
-                fixationRight.setAutoDraw(False)
-                blackBoxRight.setAutoDraw(False)
+#            if windowRight.status == STARTED: #and \
+#                    #t >= (preStimInterval+stimDuration-win.monitorFramePeriod*0.75):
+#                windowRight.setAutoDraw(False)
+#                fixationRight.setAutoDraw(False)
+#                blackBoxRight.setAutoDraw(False)
 
             # *mask* updates
             if mask.status == NOT_STARTED:
@@ -386,7 +404,7 @@ for trialN in range(nTrialsPerStair):
                 mask.fieldPos = [maskOffsetX, windowOffsetY]
                 mask.setAutoDraw(True)
                 maskMoveClock.reset()
-            if mask.status == STARTED and t>0.5:
+            if mask.status == STARTED and t>preStimInterval:
                 if tMaskMove == 0:
                     tMaskMove = frameDur # maskMoveClock.getTime()
                     tMaskRec = maskMoveClock.getTime()
@@ -400,9 +418,9 @@ for trialN in range(nTrialsPerStair):
                 maskMovePos[maskElemsOutside] = -maxTravDist * \
                     maskMovePos[maskElemsOutside] / abs(maskMovePos[maskElemsOutside])
                 mask.xys = maskMovePos
-            if mask.status == STARTED and t >= (0 + (preStimInterval+stimDuration-
-                    win.monitorFramePeriod*0.75)):
-                mask.setAutoDraw(False)
+#            if mask.status == STARTED and t >= (0 + (preStimInterval+stimDuration-
+#                    win.monitorFramePeriod*0.75)):
+#                mask.setAutoDraw(False)
 
             # *target* updates
             if t >= preStimInterval and target.status == NOT_STARTED:
@@ -453,22 +471,29 @@ for trialN in range(nTrialsPerStair):
                 if len(theseKeys) > 0:  # at least one key was pressed
                     key_upDown.keys = theseKeys[-1]  # just the last key pressed
                     key_upDown.rt = key_upDown.clock.getTime()
+                    #print 'key pressed: ' + key_upDown.keys
+                    #print 'key correct: ' + thisTargCorrAns
+                    #stairFilename = filename + os.sep + filename + '_stair'
+                    #thisStair.saveAsText(stairFilename)
+                    #thisStair.saveAsPickle(stairFilename + '_pickle')
+                    #print thisStair.printAsText('printing')
                     # was this 'correct'?
-                    print 'key pressed: ' + key_upDown.keys
-                    print 'key correct: ' + thisTargCorrAns
                     if (key_upDown.keys == str(thisTargCorrAns)) or \
                             (key_upDown.keys == thisTargCorrAns):
-                        print 'entered correct if'
+                        print 'correct response'
                         key_upDown.corr = 1
                     else:
-                        print 'entered incorrect if'
+                        print 'incorrect response'
                         key_upDown.corr = 0
                     # update staircase:
-                    print 'correct or incorrect? ' + str(key_upDown.corr)
-                    print 'rt: ' + str(key_upDown.rt)
+                    #print 'correct or incorrect? ' + str(key_upDown.corr)
+                    print 'RT: %.3f' %(key_upDown.rt)
                     thisStair.addData(key_upDown.corr)
                     #thisStair.addData('key_upDown.corr', key_upDown.corr)
-                    thisStair.addData('key_upDown.rt', key_upDown.rt)
+                    thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
+                    ########
+                    # Printing for debug:
+                    print thisStair.data
                     # a response ends the routine
                     continueRoutine = False
 
@@ -530,9 +555,15 @@ for trialN in range(nTrialsPerStair):
 condN = 0 # the conditions are simply defined by their numbers
 for thisStair in stairs:
     condN += 1
-    stairFilename = filename + os.sep + filename + '_cond' + str(condN)
+    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
+        expInfo['participant'], expInfo['domEye'], expInfo['session'], \
+        expInfo['date'] + '_cond' + str(condN))
+    print 'reversals:'
+    print thisStair.reversalIntensities
+    print 'mean of final 6 reversals = %.3f' \
+        %(np.average(thisStair.reversalIntensities[-6:]))
     thisStair.saveAsPickle(stairFilename)
-    # thisStair.saveAsText(stairFilename)
+    thisStair.saveAsText(stairFilename)
 
 win.close()
 core.quit()
