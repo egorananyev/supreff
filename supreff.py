@@ -43,7 +43,7 @@ stimDuration = 2 # 3.6s in the Moors paper
 ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
-nTrialsPerStair = 36 # 30
+nTrialsPerStair = 30 # 30
 contrMin = 0
 contrMax = 1
 # Other variables:

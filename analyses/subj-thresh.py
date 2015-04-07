@@ -46,6 +46,25 @@ for thisFileName in files:
     print np.average(thisDat.reversalIntensities[-15:])
 dataFolder = os.path.split(thisFileName)[0] #just the path, excluding file name
 
+# My version of data input:
+print 'BUILDING DATA FRAME'
+wdf=pd.DataFrame(columns=['maskSpeed','targLoc','startVal','trial','label','contrast'])
+for thisFileName in files:
+    thisDat = fromFile(thisFileName)
+    assert isinstance(thisDat, data.StairHandler) # not sure what this does but oh well
+    nTrials = len(thisDat.intensities)
+    df = pd.DataFrame({
+        'maskSpeed': np.repeat(thisDat.extraInfo['maskSpeed'], nTrials),
+        'targLoc': np.repeat(thisDat.extraInfo['targLoc'], nTrials),
+        'startVal': np.repeat(thisDat.extraInfo['startVal'], nTrials),
+        'trial': range(nTrials),
+        'label': np.repeat(thisDat.extraInfo['label'], nTrials),
+        'contrast': thisDat.intensities})
+#    print df
+    wdf = wdf.append(df)
+print wdf
+print 'BUILDING DATA FRAME COMPLETED'
+
 # Load the conditions data set.
 cond = pd.read_csv(dataFolder + os.sep + 'cond-expt01.csv')
 
@@ -54,6 +73,7 @@ cond = pd.read_csv(dataFolder + os.sep + 'cond-expt01.csv')
 fileN = 0
 colors = 'obrgkcmobrgkcm'
 f, axarr = plt.subplots(2,5)
+#grid = sns.FacetGrid(
 for ixMaskSpeed, curMaskSpeed in enumerate(pd.unique(cond.maskSpeed)):
     for ixTargLoc, curTargLoc in enumerate(pd.unique(cond.targLoc)):
         print '======'
