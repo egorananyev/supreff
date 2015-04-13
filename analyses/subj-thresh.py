@@ -16,6 +16,7 @@ import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # conditional variables:
 condVars = ['maskSpeed','targLoc']
@@ -63,8 +64,18 @@ for thisFileName in files:
 #    print df
     wdf = wdf.append(df)
 print wdf
+wdf.to_csv(os.path.join(dataFolder, 'res-table.csv'))
 print 'BUILDING DATA FRAME COMPLETED'
 
+# Plotting using seaborn.
+#sns.set(style="ticks")
+sns.set(font_scale=1.8)
+grid = sns.FacetGrid(wdf, row='targLoc', col='maskSpeed', hue='startVal', size=5.5)
+grid.map(plt.plot, 'trial', 'contrast', marker='o')
+grid.set(ylim=(0,1))
+pylab.show()
+
+'''
 # Load the conditions data set.
 cond = pd.read_csv(dataFolder + os.sep + 'cond-expt01.csv')
 
@@ -84,9 +95,9 @@ for ixMaskSpeed, curMaskSpeed in enumerate(pd.unique(cond.maskSpeed)):
             (cond['startVal']==0.1)]
         # Finding the file with the data for the above condition:
         fileLow = allCondLabels.index(condLow.values)
-        print condLow.values
-        print fileLow
-        print allIntensities[fileLow]
+#        print condLow.values
+#        print fileLow
+#        print allIntensities[fileLow]
         axarr[ixTargLoc, ixMaskSpeed].plot(allIntensities[fileLow])
         axarr[ixTargLoc, ixMaskSpeed]
         condHigh = cond.label[(cond['targLoc']==curTargLoc) & \
@@ -94,10 +105,11 @@ for ixMaskSpeed, curMaskSpeed in enumerate(pd.unique(cond.maskSpeed)):
             (cond['startVal']==0.8)]
         # Finding the file with the data for the above condition:
         fileHigh = allCondLabels.index(condHigh.values)
-        print condHigh.values
-        print fileHigh
-        print allIntensities[fileHigh]
+#        print condHigh.values
+#        print fileHigh
+#        print allIntensities[fileHigh]
         axarr[ixTargLoc, ixMaskSpeed].plot(allIntensities[fileHigh])
         axarr[ixTargLoc, ixMaskSpeed].set_title(str(curMaskSpeed)+' '+curTargLoc)
 
 pylab.show()
+'''
