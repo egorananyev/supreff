@@ -20,11 +20,9 @@ print allSubjDirs
 
 ## Nested loop to go through the directories and files.
 # A single data frame for the entire data set:
-wdf = pd.DataFrame(columns=['subj','session','maskSpeed','targLoc','startVal',
-    'trial','label','contrast'])
+wdf = pd.DataFrame()
 # No, it means "whole threshold frame":
-wtf = pd.DataFrame(columns=['subj','session','maskSpeed','targLoc','startVal',
-    'label','threshold'])
+wtf = pd.DataFrame()
 # Looping through the directories:
 for thisSubjDir in allSubjDirs:
     # CSV file for getting the current subject and session:
@@ -33,8 +31,8 @@ for thisSubjDir in allSubjDirs:
     thisSession = thisCsv.session[0]
     # The list of files for the current session:
     files = glob.glob(dataDir + os.sep + thisSubjDir + os.sep + '*.psydat')
-#    print files
     # Looping through the files:
+    normds = pd.DataFrame()
     for thisFileName in files:
         thisDat = fromFile(thisFileName)
         assert isinstance(thisDat, data.StairHandler) # not sure what this does but oh well
@@ -58,32 +56,35 @@ for thisSubjDir in allSubjDirs:
             'startVal': thisDat.extraInfo['startVal'],
             'label': thisDat.extraInfo['label'],
             'threshold': [np.average(thisDat.reversalIntensities[-nRevs:])] })
-        wtf = wtf.append(tf)
+        normds = normds.append(tf)
+    normds['normThresh'] = normds['threshold'] / np.average(normds['threshold'])
+    wtf = wtf.append(normds)
     # getting the subject directory name to use as the name for plots:
     subjDirName = os.path.basename(os.path.dirname(thisFileName))
-    #wdf.to_csv(os.path.join(os.path.dirname(thisFileName), 'res-table.csv'))
 
-print wdf # trial contrasts
-print wtf # thresholds
+#print 'whole data frame'
+#print wdf # trial contrasts
+#print 'whole threshold data frame'
+#print wtf # thresholds
 
-# Plotting using seaborn.
-#sns.set(style="ticks")
-#sns.set(style="whitegrid")
-#sns.set(font_scale=1.8)
-#grid = sns.FacetGrid(wtf, col='subj', col_wrap=3, size=5.5)
-#grid.map(plt.factorplot, 'maskSpeed', 'threshold', 'targLoc')
-#grid.set(ylim=(0,1))
+g=sns.factorplot('maskSpeed', 'threshold', 'targLoc', col='subj', data=wtf, 
+    col_wrap=3, kind='bar',)
+g.set(ylim=(0,.35))
+pylab.savefig(dataDir + os.sep + 'subjThresholds.pdf')
+#pylab.show()
 
-sns.factorplot('maskSpeed', 'threshold', 'targLoc', col='subj', data=wtf, col_wrap=3, 
-    kind='bar')
-pylab.show()
+g=sns.factorplot('maskSpeed', 'threshold', 'targLoc', wtf, kind='box')
+g.set(ylim=(0,.35))
+pylab.savefig(dataDir + os.sep + 'groupThresholds.pdf')
+#pylab.show()
 
-sns.factorplot('maskSpeed', 'threshold', 'targLoc', wtf, kind='box')
-pylab.show()
+g=sns.factorplot('maskSpeed', 'normThresh', 'targLoc', col='subj', data=wtf, 
+    col_wrap=3, kind='bar')
+g.set(ylim=(0,3.5))
+pylab.savefig(dataDir + os.sep + 'subjNormThresh.pdf')
+#pylab.show()
 
-'''
-# Output the figure.
-figFile = dataDir + os.sep + subjDirName + '.pdf'
-pylab.savefig(figFile)
-print 'saved figure to: ' + figFile
-'''
+g=sns.factorplot('maskSpeed', 'normThresh', 'targLoc', wtf, kind='box')
+g.set(ylim=(0,3.5))
+pylab.savefig(dataDir + os.sep + 'groupNormThresh.pdf')
+#pylab.show()
