@@ -69,10 +69,10 @@ contrMax = 1
 # Other variables:
 contrSteps = [.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03,.03,.03,.02,.02]
 targInitPosAll = [-1, 0, 1] # multiplier for starting target position along x-axis
-## TEMP:
-#nTrialsPerStair = 12
-#conditionsFileName = 'cond-expt02-partial.csv'
-#contrSteps = [.3,.3,.2,.2,.1,.1,.05,.05,.03,.03,.02,.02]
+# TEMP:
+nTrialsPerStair = 12
+conditionsFileName = 'cond-expt02-partial.csv'
+contrSteps = [.3,.3,.2,.2,.1,.1,.05,.05,.03,.03,.02,.02]
 # ====================================================================================
 
 # An ExperimentHandler isn't essential but helps with data saving
@@ -543,9 +543,6 @@ for trialN in range(nTrialsPerStair):
                     else:
                         print 'incorrect response'
                         key_upDown.corr = 0
-                    # update staircase:
-                    thisStair.addData(key_upDown.corr)
-                    thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
 #                    ########
 #                    # Printing for debug:
 #                    print 'RT: %.3f' %(key_upDown.rt)
@@ -555,6 +552,9 @@ for trialN in range(nTrialsPerStair):
             # if key is pressed, wait for the presentation time to pass to terminate\
             #   the trial:
             if key_pressed and key_pause and t >= stimOffset:
+                # update staircase with the last response:
+                thisStair.addData(key_upDown.corr)
+                thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
                 # a response ends the routine
                 continueRoutine = False
 
