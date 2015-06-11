@@ -67,7 +67,7 @@ print 'saved figure to: ' + figFile
 # Raw thresholds.
 figFile = dataDir + os.sep + subjDirName + '_subjThresh.pdf'
 g=sns.factorplot('maskSpeed', 'threshold', data=subjtdf, kind='box')
-g.set(ylim=(0,.35))
+g.set(ylim=(0,.5))
 pylab.savefig(figFile)
 print 'saved figure to: ' + figFile
 #pylab.show()
@@ -75,7 +75,7 @@ print 'saved figure to: ' + figFile
 # Normalized thresholds.
 figFile = dataDir + os.sep + subjDirName + '_normThresh.pdf'
 g=sns.factorplot('maskSpeed', 'normThresh', data=subjtdf, kind='box')
-g.set(ylim=(0,3.5))
+g.set(ylim=(0,5))
 pylab.savefig(figFile)
 print 'saved figure to: ' + figFile
 #pylab.show()
