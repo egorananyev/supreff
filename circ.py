@@ -57,7 +57,7 @@ stimDuration = 2 # 3.6s in the Moors paper
 ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
-if expInfo['exptNum']=='1a': #expt.1a - circular pattern
+if expInfo['exptNum'] in ['1a','1b']: #expt.1a - circular pattern
     conditionsFileName = 'cond-expt1a.csv'
     nTrialsPerStair = 48
 else:
@@ -66,11 +66,6 @@ contrMin = 0
 contrMax = 1
 # Other variables:
 contrSteps = [.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03,.03,.03,.02,.02]
-#targInitPosAll = [-1, 0, 1] # multiplier for starting target position along x-axis
-# TEMP:
-#nTrialsPerStair = 12
-#conditionsFileName = 'cond-expt02-partial.csv'
-#contrSteps = [.3,.3,.2,.2,.1,.1,.05,.05,.03,.03,.02,.02]
 print nTrialsPerStair
 print conditionsFileName
 # ====================================================================================
@@ -144,9 +139,9 @@ mask = visual.ElementArrayStim(win=win, name='mask', units='deg',
     colorSpace='rgb', opacities=1, fieldPos=[0,0], sizes=1, nElements=nMaskElements, 
     elementMask=None, elementTex=None, sfs=3, xys=maskInitPos, interpolate=True)
 # fixation crosses:
-fixationLeft = visual.GratingStim(win, name='fixationLeft', color='white', 
+fixationLeft = visual.GratingStim(win, name='fixationLeft', color='orange', 
     tex=None, mask='circle', size=0.2, pos=[-windowOffsetX, windowOffsetY])
-fixationRight = visual.GratingStim(win, name='fixationRight', color='white', 
+fixationRight = visual.GratingStim(win, name='fixationRight', color='orange', 
     tex=None, mask='circle', size=0.2, pos=[windowOffsetX, windowOffsetY])
 # pause text:
 pauseTextLeft = visual.TextStim(win=win, ori=0, name='pauseTextLeft',
@@ -354,7 +349,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
         #  (assuming that the mask is different for every trial):
         # Since the mask is moving circularly, x=position along the circle, y=r
         maskInitPosX = np.random.rand(nMaskElements,1)
-        maskInitPosY = np.random.rand(nMaskElements,1)
+        maskInitPosY = np.random.rand(nMaskElements,1)*0.85+0.15 # no clutter ar fixation
         maskMovePosX = maskInitPosX
         maskMovePosY = maskInitPosY
         maskSpeedMult = np.random.rand(nMaskElements,1)*.6+.7
@@ -447,8 +442,8 @@ for trialN in np.array(range(nTrialsPerStair))+1:
             # if the target has already disappeared, yet the key is still not pressed\
             #   continue, the trial with the yellow boxes:
             if ~key_pressed and t > stimOffset:
-                windowLeft.lineColor = 'yellow'
-                windowRight.lineColor = 'yellow'
+                windowLeft.lineColor = 'blue'
+                windowRight.lineColor = 'blue'
 
             # pause text (after the response is made):
             if key_pressed and ~key_pause and t > stimOffset:
