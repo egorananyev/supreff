@@ -49,7 +49,7 @@ targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
 # Mask variables:
-nMaskElements = 320 # must be divisible by the number of directions allowed (below)
+nMaskElements = 4 # 320 # must be divisible by the number of directions allowed (below)
 maskDirections = [-1,1] # ccwise , cw
 # Timing variables (in seconds) and trial number:
 preStimInterval = 1
@@ -59,13 +59,13 @@ fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
 if expInfo['exptNum'] in ['1a','1b']: #expt.1a - circular pattern
     conditionsFileName = 'cond-expt1a.csv'
-    nTrialsPerStair = 48
+    nTrialsPerStair = 32
 else:
     print 'ERROR! Not a valid experiment session'
 contrMin = 0
 contrMax = 1
 # Other variables:
-contrSteps = [.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03,.03,.03,.02,.02]
+contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03]
 print nTrialsPerStair
 print conditionsFileName
 # ====================================================================================
@@ -96,7 +96,7 @@ else:
 # Initialize components for Routine "instructions"
 instructionsClock = core.Clock()
 instrText = visual.TextStim(win=win, ori=0, name='instrText',
-    text='Indicate whether the red circle/disk rotates clockwise (x) or counterclockwise (z):\n\n The frames will turn *yellow* when the target disappeared.',
+    text='Indicate whether the red circle/disk rotates clockwise (x) or counterclockwise (z):\n\n The frames will turn *blue* when the target disappeared.',
     font='Cambria', pos=[0, 0], height=1, wrapWidth=10, color='white', \
     colorSpace='rgb', opacity=1)
 
@@ -143,6 +143,15 @@ fixationLeft = visual.GratingStim(win, name='fixationLeft', color='orange',
     tex=None, mask='circle', size=0.2, pos=[-windowOffsetX, windowOffsetY])
 fixationRight = visual.GratingStim(win, name='fixationRight', color='orange', 
     tex=None, mask='circle', size=0.2, pos=[windowOffsetX, windowOffsetY])
+# question text:
+qntxtLeft = visual.TextStim(win=win, name='qntxtLeft',
+    text='Did you see the target? \n ,(<) = yes\n .(>) = no', font='Cambria',
+    pos=[-windowOffsetX, windowOffsetY], height=.5, wrapWidth=3,
+    color='white', colorSpace='rgb', opacity=1)
+qntxtRight = visual.TextStim(win=win, name='qntxtRight',
+    text='Did you see the target? \n ,(<) = yes\n .(>) = no', font='Cambria',
+    pos=[windowOffsetX, windowOffsetY], height=.5, wrapWidth=3,
+    color='white', colorSpace='rgb', opacity=1)
 # pause text:
 pauseTextLeft = visual.TextStim(win=win, ori=0, name='pauseTextLeft',
     text='Press Spacebar to continue.', font='Cambria', alignHoriz='center',
@@ -378,6 +387,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
         tMaskMove = 0
         key_pressed = False
         key_pause = False
+        visibility_response = False
         windowLeft.lineColor = 'white'
         windowRight.lineColor = 'white'
         # Vertical offset of the target:
@@ -395,6 +405,8 @@ for trialN in np.array(range(nTrialsPerStair))+1:
         trialComponents.append(ISI)
         trialComponents.append(target)
         trialComponents.append(mask)
+        trialComponents.append(qntxtLeft)
+        trialComponents.append(qntxtRight)
         trialComponents.append(fixationLeft)
         trialComponents.append(fixationRight)
         trialComponents.append(key_upDown)
@@ -421,10 +433,6 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 windowLeft.setAutoDraw(True)
                 fixationLeft.setAutoDraw(True)
                 blackBoxLeft.setAutoDraw(True)
-#            if windowLeft.status == STARTED and t >= stimOffset:
-#                windowLeft.setAutoDraw(False)
-#                fixationLeft.setAutoDraw(False)
-#                blackBoxLeft.setAutoDraw(False)
             
             # *windowRight* updates
             if windowRight.status == NOT_STARTED:
@@ -434,10 +442,6 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 windowRight.setAutoDraw(True)
                 fixationRight.setAutoDraw(True)
                 blackBoxRight.setAutoDraw(True)
-#            if windowRight.status == STARTED: #and t >= stimOffset:
-#                windowRight.setAutoDraw(False)
-#                fixationRight.setAutoDraw(False)
-#                blackBoxRight.setAutoDraw(False)
 
             # if the target has already disappeared, yet the key is still not pressed\
             #   continue, the trial with the yellow boxes:
@@ -445,12 +449,33 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 windowLeft.lineColor = 'blue'
                 windowRight.lineColor = 'blue'
 
-            # pause text (after the response is made):
-            if key_pressed and ~key_pause and t > stimOffset:
-                pauseTextLeft.setAutoDraw(True)
-                pauseTextRight.setAutoDraw(True)
+            # visibility question:
+            if key_pressed and ~visibility_response and t>stimOffset:
+                qntxtLeft.setAutoDraw(True)
+                qntxtRight.setAutoDraw(True)
                 windowLeft.lineColor = 'white'
                 windowRight.lineColor = 'white'
+                ##### Record the response
+                visKeys = event.getKeys(keyList=['comma','period']) #,=yes, .=no
+                # check for quit:
+                if "escape" in theseKeys:
+                    endExpNow = True
+                if len(visKeys) > 0:  # at least one key was pressed
+                    print 'visibility indicated'
+                    if visKeys[-1] == 'comma':
+                        seenUnseen = 'seen'
+                        print 'target seen'
+                    if visKeys[-1] == 'period':
+                        seenUnseen = 'unseen'
+                        print 'target not seen'
+                    visibility_response = True
+
+            # pause text (after the response is made):
+            if key_pressed and visibility_response and ~key_pause and t > stimOffset:
+                qntxtLeft.setAutoDraw(False)
+                qntxtRight.setAutoDraw(False)
+                pauseTextLeft.setAutoDraw(True)
+                pauseTextRight.setAutoDraw(True)
 
             # *mask* updates
             if mask.status == NOT_STARTED and t > preStimInterval:
@@ -462,13 +487,16 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 mask.setAutoDraw(True)
                 maskMoveClock.reset()
             if mask.status == STARTED and t > preStimInterval and ~key_pressed:
-                maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*(maskInitPosX+\
+                maskCurPosX = maskInitPosX + \
                     np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
-                    maskSpeedMult/360))
+                    maskSpeedMult/360
+                maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
                 maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*(maskInitPosX+\
                     np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
                     maskSpeedMult/360))
                 mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
+                mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
+                #print mask.oris
             if mask.status == STARTED and t >= stimOffset and key_pressed:
                 mask.setAutoDraw(False)
 
@@ -497,7 +525,6 @@ for trialN in np.array(range(nTrialsPerStair))+1:
 
             # *key_space* updates
             if ~key_pause and key_pressed and t >= stimOffset:
-#                spaceKey = event.getKeys(keyList=['space'])
                 if 'space' in event.getKeys(keyList=['space']):
                     print 'spacebar pressed'
                     key_pause = True
@@ -528,18 +555,15 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                     else:
                         print 'incorrect response'
                         key_upDown.corr = 0
-#                    ########
-#                    # Printing for debug:
-#                    print 'RT: %.3f' %(key_upDown.rt)
-#                    print thisStair.data
 
             # if key is not pressed, do nothing
             # if key is pressed, wait for the presentation time to pass to terminate\
             #   the trial:
-            if key_pressed and key_pause and t >= stimOffset:
+            if key_pressed and key_pause and visibility_response and t >= stimOffset:
                 # update staircase with the last response:
                 thisStair.addData(key_upDown.corr)
                 thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
+                thisStair.addOtherData('seenUnseen', seenUnseen)
                 # a response ends the routine
                 continueRoutine = False
 
