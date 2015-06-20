@@ -49,7 +49,7 @@ targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
 # Mask variables:
-nMaskElements = 4 # 320 # must be divisible by the number of directions allowed (below)
+nMaskElements = 320 # must be divisible by the number of directions allowed (below)
 maskDirections = [-1,1] # ccwise , cw
 # Timing variables (in seconds) and trial number:
 preStimInterval = 1
@@ -58,14 +58,17 @@ ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
 if expInfo['exptNum'] in ['1a','1b']: #expt.1a - circular pattern
-    conditionsFileName = 'cond-expt1a.csv'
-    nTrialsPerStair = 32
+    #conditionsFileName = 'cond-expt1a.csv'
+    conditionsFileName = 'cond-test.csv'
+    nTrialsPerStair = 36
+    #nRevs = 10
+    nRevs=2
 else:
     print 'ERROR! Not a valid experiment session'
 contrMin = 0
 contrMax = 1
 # Other variables:
-contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03]
+contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1] #,.1,.1,.05,.05,.05,.05,.03,.03]
 print nTrialsPerStair
 print conditionsFileName
 # ====================================================================================
@@ -96,7 +99,7 @@ else:
 # Initialize components for Routine "instructions"
 instructionsClock = core.Clock()
 instrText = visual.TextStim(win=win, ori=0, name='instrText',
-    text='Indicate whether the red circle/disk rotates clockwise (x) or counterclockwise (z):\n\n The frames will turn *blue* when the target disappeared.',
+    text='Indicate whether the red circle/disk rotates clockwise (">") or counter-clockwise ("<"):\n\n The frames will turn *blue* when the target disappeared.',
     font='Cambria', pos=[0, 0], height=1, wrapWidth=10, color='white', \
     colorSpace='rgb', opacity=1)
 
@@ -145,12 +148,12 @@ fixationRight = visual.GratingStim(win, name='fixationRight', color='orange',
     tex=None, mask='circle', size=0.2, pos=[windowOffsetX, windowOffsetY])
 # question text:
 qntxtLeft = visual.TextStim(win=win, name='qntxtLeft',
-    text='Did you see the target? \n ,(<) = yes\n .(>) = no', font='Cambria',
-    pos=[-windowOffsetX, windowOffsetY], height=.5, wrapWidth=3,
+    text='1=no experience\n2=weak glimpse\n3=almost clear\n4=absolutely clear',
+    font='Cambria', pos=[-windowOffsetX, windowOffsetY], height=.55, wrapWidth=4.5,
     color='white', colorSpace='rgb', opacity=1)
 qntxtRight = visual.TextStim(win=win, name='qntxtRight',
-    text='Did you see the target? \n ,(<) = yes\n .(>) = no', font='Cambria',
-    pos=[windowOffsetX, windowOffsetY], height=.5, wrapWidth=3,
+    text='1=no experience\n2=weak glimpse\n3=almost clear\n4=absolutely clear',
+    font='Cambria', pos=[windowOffsetX, windowOffsetY], height=.55, wrapWidth=4.5,
     color='white', colorSpace='rgb', opacity=1)
 # pause text:
 pauseTextLeft = visual.TextStim(win=win, ori=0, name='pauseTextLeft',
@@ -259,10 +262,10 @@ elif expInfo['domEye'] == 'l': # if the dominant eye is left...
 #   randomization for trials. The values in each randCondCombi vector are: targDir, 
 #   targInitPos, and targLoc. Note that targInitPos is NOT YET multiplied by the max
 #   travel distance. randCondCombi yields a vector of conditions for twelve trials:
-randCondCombi = list(itertools.product(*[[-1,1],[0,.33,.66],[.475,.525]]))
-nCombiReps = nTrialsPerStair / np.shape(randCondCombi)[0]
-print 'random condition combination vector: ' + str(randCondCombi)
-print 'number of repeats (blocks) for the vector: ' + str(nCombiReps)
+#randCondCombi = list(itertools.product(*[[-1,1],[0,.33,.66],[.475,.525]]))
+#nCombiReps = nTrialsPerStair / np.shape(randCondCombi)[0]
+#print 'random condition combination vector: ' + str(randCondCombi)
+#print 'number of repeats (blocks) for the vector: ' + str(nCombiReps)
 
 # Setting up each staircase, one by one:
 stairs=[] # setting up a variable containing all our staircases
@@ -270,10 +273,10 @@ for thisCondition in stairConds:
     # I want to record the sequence of the combinations, but not sure if it's a good
     #  idea, since I don't know how it's going to handle the output. I can do the
     #  conversion prior to the output, I guess.
-    thisCombi_dirXpos = np.random.permutation(np.repeat(randCondCombi, nCombiReps, 0))
-    thisCondition['randCondCombi'] = thisCombi_dirXpos
+#    thisCombi_dirXpos = np.random.permutation(np.repeat(randCondCombi, nCombiReps, 0))
+#    thisCondition['randCondCombi'] = thisCombi_dirXpos
     thisStair = data.StairHandler(startVal = thisCondition['startVal'],
-        extraInfo = thisCondition, nTrials=nTrialsPerStair, nUp=1, nDown=2,
+        extraInfo = thisCondition, nUp=1, nDown=2, nReversals=nRevs, # nTrials=nTrialsPerStair,
         minVal = contrMin, maxVal = contrMax, stepSizes = contrSteps, stepType='lin')
     thisStair.setExp(thisExp)
     stairs.append(thisStair)
@@ -296,16 +299,31 @@ shutil.copyfile(conditionsFileName, filename + os.sep + conditionsFileName)
 stimOffset = (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75))
 # ====================================================================================
 
-for trialN in np.array(range(nTrialsPerStair))+1:
+#trialN = 0
+#for trialN in np.array(range(nTrialsPerStair))+1:
+while len(stairs)>0:
+    #trialN = trialN + 1
     shuffle(stairs) # randomizing the appearance of the stairs for each trial
-    for thisStair in stairs:
+    thisStair = stairs.pop()
+    try:
+        thisIntensity = thisStair.next() # contrast value
+    except StopIteration:
+        stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
+            expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
+            expInfo['date'] + '_cond_' + thisStair.extraInfo['label'])
+        thisStair.saveAsPickle(stairFilename)
+        print "finished staircase"
+    else:
+    #for thisStair in stairs:
         # Based on the current staircase, assigning the current contrast value and
         #  other variables:
         thisIntensity = thisStair.next() # contrast value
-        thisTargDir = thisStair.extraInfo['randCondCombi'][trialN-1,0]
-        thisTargLoc = thisStair.extraInfo['randCondCombi'][trialN-1,2]
-        if thisTargDir==1: thisTargCorrAns='z' #ccw
-        elif thisTargDir==-1: thisTargCorrAns='x' #cw
+        thisTargDir = np.random.choice([-1,1])
+            #thisStair.extraInfo['randCondCombi'][trialN-1,0]
+        thisTargLoc = np.random.choice([0.475, 0.525])
+            #thisStair.extraInfo['randCondCombi'][trialN-1,2]
+        if thisTargDir==1: thisTargCorrAns='comma' #ccw
+        elif thisTargDir==-1: thisTargCorrAns='period' #cw
         thisTargVertices = thisStair.extraInfo['targVertices']
         thisMaskVertices = thisStair.extraInfo['maskVertices']
         # Need to make sure that the square diameteres are somewhat reduced to match
@@ -331,7 +349,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
         thisMaskColBlue = thisStair.extraInfo['maskColBlue']
         thisMaskColGrey = thisStair.extraInfo['maskColGrey']
         # What changes from trial to trial (will be different for dif expts)?
-        print '### Trial ' + str(trialN) + ' ###'
+        #print '### Trial ' + str(trialN) + ' ###'
         print 'thisIntensity (contrast): start=%.2f, current=%.3f' \
             %(thisStair.extraInfo['startVal'], thisIntensity)
         print 'thisTargLoc: ' + str(thisTargLoc)
@@ -352,7 +370,8 @@ for trialN in np.array(range(nTrialsPerStair))+1:
         maxTravDist = (windowSize - thisTargSize/1) / 2
         # Based on the above max travel distance, setting the initial target position,
         #   thereby finishing condition setup for the trial:
-        thisTargInitPos = thisStair.extraInfo['randCondCombi'][trialN-1,1]#*maxTravDist
+        thisTargInitPos = np.random.choice([0,.33,.66])
+            #thisStair.extraInfo['randCondCombi'][trialN-1,1]#*maxTravDist
         print 'thisTargInitPos: ' + str(thisTargInitPos)
         # Resetting the starting positions of mask elements - 
         #  (assuming that the mask is different for every trial):
@@ -456,18 +475,13 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 windowLeft.lineColor = 'white'
                 windowRight.lineColor = 'white'
                 ##### Record the response
-                visKeys = event.getKeys(keyList=['comma','period']) #,=yes, .=no
+                visKeys = event.getKeys(keyList=['1','2','3','4'])
                 # check for quit:
                 if "escape" in theseKeys:
                     endExpNow = True
                 if len(visKeys) > 0:  # at least one key was pressed
-                    print 'visibility indicated'
-                    if visKeys[-1] == 'comma':
-                        seenUnseen = 'seen'
-                        print 'target seen'
-                    if visKeys[-1] == 'period':
-                        seenUnseen = 'unseen'
-                        print 'target not seen'
+                    print 'visibility: ' + visKeys[-1]
+                    visResp = visKeys[-1]
                     visibility_response = True
 
             # pause text (after the response is made):
@@ -539,7 +553,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
                 key_upDown.clock.reset()  # now t=0
                 event.clearEvents(eventType='keyboard')
             if key_upDown.status == STARTED:
-                theseKeys = event.getKeys(keyList=['z', 'x']) #z=ccw, x=cw
+                theseKeys = event.getKeys(keyList=['comma', 'period']) #<=ccw, >=cw
                 # check for quit:
                 if "escape" in theseKeys:
                     endExpNow = True
@@ -560,10 +574,14 @@ for trialN in np.array(range(nTrialsPerStair))+1:
             # if key is pressed, wait for the presentation time to pass to terminate\
             #   the trial:
             if key_pressed and key_pause and visibility_response and t >= stimOffset:
+                # update staircase with the random variable combination:
+                thisStair.addOtherData('thisTargDir', thisTargDir)
+                thisStair.addOtherData('thisTargLoc', thisTargLoc)
+                thisStair.addOtherData('thisTargInitPos', thisTargInitPos)
                 # update staircase with the last response:
                 thisStair.addData(key_upDown.corr)
                 thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
-                thisStair.addOtherData('seenUnseen', seenUnseen)
+                thisStair.addOtherData('visResp', visResp)
                 # a response ends the routine
                 continueRoutine = False
 
@@ -599,11 +617,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
             # don't flip if this routine is over or we'll get a blank screen
             if continueRoutine:  
                 win.flip()
-            else:  # this Routine was not non-slip safe so reset non-slip timer
-                stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-                    expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
-                    expInfo['date'] + '_cond_' + thisStair.extraInfo['label'])
-                thisStair.saveAsPickle(stairFilename)
+            else: # this Routine was not non-slip safe so reset non-slip timer
                 routineTimer.reset()
         
         #-------Ending Routine "trial"-------
@@ -611,6 +625,7 @@ for trialN in np.array(range(nTrialsPerStair))+1:
             if hasattr(thisComponent, "setAutoDraw"):
                 thisComponent.setAutoDraw(False)
 
+        stairs.append(thisStair)
         thisExp.nextEntry()
     
 # Writing the separate outputs for the staircases:

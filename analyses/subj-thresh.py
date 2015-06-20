@@ -16,7 +16,7 @@ files = gui.fileOpenDlg(dataDir)
 if not files:
     core.quit()
 
-nRevs = 10
+nRevs = 6
 
 # My version of data input.
 print 'BUILDING DATA FRAME'
@@ -29,7 +29,7 @@ for thisFileName in files:
     df = pd.DataFrame({
         'maskSpeed': np.repeat(thisDat.extraInfo['maskSpeed'], nTrials),
         'startVal': np.repeat(thisDat.extraInfo['startVal'], nTrials),
-        'trial': range(nTrials),
+        'trial': np.array(range(nTrials))+1,
         'label': np.repeat(thisDat.extraInfo['label'], nTrials),
         'contrast': thisDat.intensities})
 #    print df
