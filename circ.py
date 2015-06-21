@@ -58,18 +58,18 @@ ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
 if expInfo['exptNum'] in ['1a','1b']: #expt.1a - circular pattern
-    #conditionsFileName = 'cond-expt1a.csv'
-    conditionsFileName = 'cond-test.csv'
-    nTrialsPerStair = 36
-    #nRevs = 10
-    nRevs=2
+    conditionsFileName = 'cond-expt1a.csv'
+    nRevs = 12
+    #conditionsFileName = 'cond-test.csv'   #test
+    #nRevs=2                                #test
+    #nTrialsPerStair = 36
 else:
     print 'ERROR! Not a valid experiment session'
 contrMin = 0
 contrMax = 1
 # Other variables:
-contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1] #,.1,.1,.05,.05,.05,.05,.03,.03]
-print nTrialsPerStair
+contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1,.1,.1] #,.05,.05,.05,.05,.03,.03]
+#print nTrialsPerStair
 print conditionsFileName
 # ====================================================================================
 
@@ -280,12 +280,12 @@ for thisCondition in stairConds:
         minVal = contrMin, maxVal = contrMax, stepSizes = contrSteps, stepType='lin')
     thisStair.setExp(thisExp)
     stairs.append(thisStair)
-    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-        expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
-        expInfo['date'] + '_cond_' + thisStair.extraInfo['label']) #str(condN))
-    print stairFilename
-    thisStair.saveAsPickle(stairFilename)
-    thisStair.saveAsText(stairFilename)
+#    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
+#        expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
+#        expInfo['date'] + '_cond_' + thisStair.extraInfo['label']) #str(condN))
+#    print stairFilename
+#    thisStair.saveAsPickle(stairFilename)
+#    thisStair.saveAsText(stairFilename)
 # Printing the attributes of the stairs:  
 print dir(stairs[0])
 # Creating a directory for storing staircase outputs:
@@ -312,12 +312,13 @@ while len(stairs)>0:
             expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
             expInfo['date'] + '_cond_' + thisStair.extraInfo['label'])
         thisStair.saveAsPickle(stairFilename)
+        thisStair.saveAsText(stairFilename)
         print "finished staircase"
     else:
     #for thisStair in stairs:
         # Based on the current staircase, assigning the current contrast value and
         #  other variables:
-        thisIntensity = thisStair.next() # contrast value
+        #thisIntensity = thisStair.next() # contrast value
         thisTargDir = np.random.choice([-1,1])
             #thisStair.extraInfo['randCondCombi'][trialN-1,0]
         thisTargLoc = np.random.choice([0.475, 0.525])
@@ -583,6 +584,7 @@ while len(stairs)>0:
                 thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
                 thisStair.addOtherData('visResp', visResp)
                 # a response ends the routine
+                stairs.append(thisStair)
                 continueRoutine = False
 
             # *ISI* period
@@ -625,7 +627,6 @@ while len(stairs)>0:
             if hasattr(thisComponent, "setAutoDraw"):
                 thisComponent.setAutoDraw(False)
 
-        stairs.append(thisStair)
         thisExp.nextEntry()
     
 # Writing the separate outputs for the staircases:
@@ -636,11 +637,11 @@ for thisStair in stairs:
     print thisStair.reversalIntensities
     print 'mean of final 6 reversals = %.3f' \
         %(np.average(thisStair.reversalIntensities[-6:]))
-    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-        expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
-        expInfo['date'] + '_cond_' + thisStair.extraInfo['label']) #str(condN))
-    thisStair.saveAsPickle(stairFilename)
-    thisStair.saveAsText(stairFilename)
+#    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
+#        expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
+#        expInfo['date'] + '_cond_' + thisStair.extraInfo['label']) #str(condN))
+#    thisStair.saveAsPickle(stairFilename)
+#    thisStair.saveAsText(stairFilename)
 
 win.close()
 core.quit()
