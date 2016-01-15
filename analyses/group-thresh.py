@@ -14,7 +14,7 @@ import seaborn as sns
 nRevs = 10 # number of reversals for calculating the threshold
 
 # Selecting the files for processing.
-dataDir = '..' + os.sep + '..' + os.sep + 'data' # common data directory
+dataDir = '..' + os.sep + '..' + os.sep + 'data-transl' # common data directory
 allSubjDirs = os.walk(dataDir).next()[1] # get the directory names
 print allSubjDirs
 
@@ -25,16 +25,17 @@ wsumtdf = pd.DataFrame() # summary threshold information across subjects
 # Looping through the directories:
 for thisSubjDir in allSubjDirs:
     # CSV file for getting the current subject and session:
-    thisCsv = pd.read_csv(dataDir + os.sep + thisSubjDir + '.csv')
+    thisCsv = pd.read_csv(dataDir + os.sep + thisSubjDir + os.sep + thisSubjDir + '.csv')
     thisSubj = thisCsv.participant[0]
-    thisSession = thisCsv.session[0]
+    thisSession = thisCsv.expName[0]
     # The list of files for the current session:
-    files = glob.glob(dataDir + os.sep + thisSubjDir + os.sep + '*.psydat')
+    files = glob.glob(dataDir + os.sep + thisSubjDir + os.sep + '*cond*.psydat')
     # Looping through the files:
     subjtdf = pd.DataFrame()
     #sumtdf = pd.DataFrame()
     for thisFileName in files:
         thisDat = fromFile(thisFileName)
+        #print dir(thisDat)
         assert isinstance(thisDat, data.StairHandler) # probably a routine check
         nTrials = len(thisDat.intensities)
         # A local data set to be later appended to the whole data set:
@@ -80,26 +81,45 @@ print 'whole threshold data frame'
 print wtdf
 print 'threshold summaries'
 print wsumtdf
+pd.DataFrame.to_csv(wsumtdf, dataDir + os.sep + 'groupThresholds.csv', index = False)
+
+sns.set_style("white")
+sns.set_context("poster")
+sns.despine()
 
 #g=sns.factorplot('maskSpeed', 'threshold', 'targLoc', col='subj', data=wtf, 
-g=sns.factorplot('maskSpeed', 'threshold', col='subj', data=wsumtdf, 
-    col_wrap=3, kind='bar',)
-g.set(ylim=(0,.35))
-pylab.savefig(dataDir + os.sep + 'subjThresholds.pdf')
+#g=sns.factorplot('maskSpeed', 'threshold', col='subj', data=wsumtdf, 
+#    col_wrap=3, kind='bar',)
+#g.set(ylim=(0,.55))
+#pylab.savefig(dataDir + os.sep + 'subjThresholds.pdf')
+#pylab.show()
+#
+#g=sns.factorplot('maskSpeed', 'threshold', data=wsumtdf, kind='box')
+#g.set(ylim=(0,.55))
+#pylab.savefig(dataDir + os.sep + 'groupThresholds.pdf')
+#pylab.show()
+#
+#g=sns.factorplot('maskSpeed', 'normThresh', col='subj', data=wsumtdf, 
+#    col_wrap=3, kind='bar')
+#g.set(ylim=(0,2))
+#pylab.savefig(dataDir + os.sep + 'subjNormThresh.pdf')
+#pylab.show()
+#
+#g=sns.factorplot('maskSpeed', 'normThresh', data=wsumtdf, kind='box')
+#g.set(ylim=(0,2))
+#plt.xlabel('Mask Speed')
+#plt.ylabel('Normalized Contrast Threshold')
+#pylab.savefig(dataDir + os.sep + 'groupNormThresh.pdf')
 #pylab.show()
 
-g=sns.factorplot('maskSpeed', 'threshold', data=wsumtdf, kind='box')
-g.set(ylim=(0,.35))
-pylab.savefig(dataDir + os.sep + 'groupThresholds.pdf')
-#pylab.show()
-
-g=sns.factorplot('maskSpeed', 'normThresh', col='subj', data=wsumtdf, 
-    col_wrap=3, kind='bar')
-g.set(ylim=(0,3.5))
-pylab.savefig(dataDir + os.sep + 'subjNormThresh.pdf')
-#pylab.show()
-
-g=sns.factorplot('maskSpeed', 'normThresh', data=wsumtdf, kind='box')
-g.set(ylim=(0,3.5))
-pylab.savefig(dataDir + os.sep + 'groupNormThresh.pdf')
+plt.figure(figsize=(5,5))
+g=sns.regplot('maskSpeed', 'normThresh', data=wsumtdf)
+g.set(ylim=(0,2))
+plt.xlabel('Mask Speed',va='top')
+plt.ylabel('Normalized Contrast Threshold')
+#plt.xticks(np.array([15,30,45,75,120]))
+plt.xticks(np.array([1,2,3,5,8]))
+pylab.tight_layout()
+pylab.subplots_adjust(top=.95)
+pylab.savefig(dataDir + os.sep + 'groupNormThresh-dot.pdf')
 #pylab.show()

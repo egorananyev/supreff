@@ -43,7 +43,8 @@ filename = '..' + os.sep + 'data' + os.sep + '%s_%s_%s_%s_%s' %(expName,
 # Window boxes and black boxes (specified in degrees of visual angles [dva]):
 windowSize = 5.03 # 4.47
 windowOffsetX = 5.62 # 6.71
-windowOffsetY = 2.83 # 4.97
+#windowOffsetY = 2.83 # 4.97
+windowOffsetY = 5.5 # 2.83
 windowThickness = 2
 targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
@@ -59,6 +60,7 @@ fadeInNofFrames = 20 # the number of frames for the fade-in
 # Criteria for contrast staircases:
 if expInfo['exptNum'] in ['1a','1b']: #expt.1a - circular pattern
     conditionsFileName = 'cond-expt1a.csv'
+    #conditionsFileName = 'cond-expt1a-train.csv'
     nRevs = 12
     #conditionsFileName = 'cond-test.csv'   #test
     #nRevs=2                                #test
@@ -68,7 +70,7 @@ else:
 contrMin = 0
 contrMax = 1
 # Other variables:
-contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1,.1,.1] #,.05,.05,.05,.05,.03,.03]
+contrSteps = [.3,.3,.3,.3,.2,.2,.2,.2,.1,.1]#,.1,.1] #,.05,.05,.05,.05,.03,.03]
 #print nTrialsPerStair
 print conditionsFileName
 # ====================================================================================
@@ -99,7 +101,7 @@ else:
 # Initialize components for Routine "instructions"
 instructionsClock = core.Clock()
 instrText = visual.TextStim(win=win, ori=0, name='instrText',
-    text='Indicate whether the red circle/disk rotates clockwise (">") or counter-clockwise ("<"):\n\n The frames will turn *blue* when the target disappeared.',
+    text='Indicate whether the grey circle/disk rotates clockwise (">") or counter-clockwise ("<"):\n\n The frames will turn *blue* when the target disappeared.',
     font='Cambria', pos=[0, 0], height=1, wrapWidth=10, color='white', \
     colorSpace='rgb', opacity=1)
 
@@ -303,6 +305,7 @@ stimOffset = (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75))
 #for trialN in np.array(range(nTrialsPerStair))+1:
 while len(stairs)>0:
     #trialN = trialN + 1
+    print '===new=trial==='
     shuffle(stairs) # randomizing the appearance of the stairs for each trial
     thisStair = stairs.pop()
     try:
@@ -316,13 +319,12 @@ while len(stairs)>0:
         print "finished staircase"
     else:
     #for thisStair in stairs:
+        print [len(o.reversalPoints) for o in stairs]
         # Based on the current staircase, assigning the current contrast value and
         #  other variables:
         #thisIntensity = thisStair.next() # contrast value
         thisTargDir = np.random.choice([-1,1])
-            #thisStair.extraInfo['randCondCombi'][trialN-1,0]
         thisTargLoc = np.random.choice([0.475, 0.525])
-            #thisStair.extraInfo['randCondCombi'][trialN-1,2]
         if thisTargDir==1: thisTargCorrAns='comma' #ccw
         elif thisTargDir==-1: thisTargCorrAns='period' #cw
         thisTargVertices = thisStair.extraInfo['targVertices']
@@ -393,7 +395,10 @@ while len(stairs)>0:
         # Setting the mask colours.
         maskColIDs = np.array([thisMaskColRed, thisMaskColBlue, thisMaskColGreen,
             thisMaskColYellow])
-        maskColAll = np.array([[1,-1,-1], [-1,-1,1], [-1,1,-1], [1,1,-1]])
+        #maskColAll = np.array([[1,-1,-1],[-1,-1,1],[-1,1,-1],[1,1,-1]])
+        #maskColAll = np.array([[-.5,-1,-1],[-1,-1,-.5],[-1,-.5,-1],[-.5,-.5,-1]])
+        maskColAll = np.array([[-.75,-1,-1],[-1,-1,-.75],[-1,-.75,-1],[-.75,-.75,-1]])
+        #maskColAll = np.array([[-.85,-1,-1],[-1,-1,-.85],[-1,-.85,-1],[-.85,-.85,-1]])
         maskColCurSet = maskColAll[maskColIDs==1]
         maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
         maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps, 0)
@@ -565,8 +570,12 @@ while len(stairs)>0:
                     # was this 'correct'?
                     if (key_upDown.keys == str(thisTargCorrAns)) or \
                             (key_upDown.keys == thisTargCorrAns):
-                        print 'correct response'
-                        key_upDown.corr = 1
+                        if thisIntensity == 0:
+                            print 'at zero, correcting to incorrect'
+                            key_upDown.corr = 0
+                        else:
+                            print 'correct response'
+                            key_upDown.corr = 1
                     else:
                         print 'incorrect response'
                         key_upDown.corr = 0
