@@ -11,10 +11,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # CONSTANTS.
-nRevs = 10 # number of reversals for calculating the threshold
+nRevs = 2 # number of reversals for calculating the threshold
 
 # Selecting the files for processing.
-dataDir = '..' + os.sep + '..' + os.sep + 'data-transl' # common data directory
+dataDir = '..' + os.sep + '..' + os.sep + 'data' # common data directory
 allSubjDirs = os.walk(dataDir).next()[1] # get the directory names
 print allSubjDirs
 
@@ -24,16 +24,18 @@ wtdf = pd.DataFrame() # whole threshold frame
 wsumtdf = pd.DataFrame() # summary threshold information across subjects
 # Looping through the directories:
 for thisSubjDir in allSubjDirs:
-    # CSV file for getting the current subject and session:
+    print 'thisSubjDir = ' + thisSubjDir
+    # CSV file for getting the current subject and experiment:
     thisCsv = pd.read_csv(dataDir + os.sep + thisSubjDir + os.sep + thisSubjDir + '.csv')
     thisSubj = thisCsv.participant[0]
-    thisSession = thisCsv.expName[0]
-    # The list of files for the current session:
-    files = glob.glob(dataDir + os.sep + thisSubjDir + os.sep + '*cond*.psydat')
+    thisParadigm = thisCsv.paradigm[0]
+    # The list of files for the current experiment:
+    files = glob.glob(dataDir + os.sep + thisSubjDir + os.sep + '*stair*.psydat')
     # Looping through the files:
     subjtdf = pd.DataFrame()
     #sumtdf = pd.DataFrame()
     for thisFileName in files:
+        print 'thisFileName = ' + thisFileName
         thisDat = fromFile(thisFileName)
         #print dir(thisDat)
         assert isinstance(thisDat, data.StairHandler) # probably a routine check
@@ -41,7 +43,7 @@ for thisSubjDir in allSubjDirs:
         # A local data set to be later appended to the whole data set:
         df = pd.DataFrame({
             'subj': np.repeat(thisSubj, nTrials),
-            'session': np.repeat(thisSession, nTrials),
+            'experiment': np.repeat(thisParadigm, nTrials),
             'maskSpeed': np.repeat(thisDat.extraInfo['maskSpeed'], nTrials),
             #'targLoc': np.repeat(thisDat.extraInfo['targLoc'], nTrials),
             'startVal': np.repeat(thisDat.extraInfo['startVal'], nTrials),
@@ -52,7 +54,7 @@ for thisSubjDir in allSubjDirs:
         # Threshold data set:
         tdf = pd.DataFrame({
             'subj': thisSubj,
-            'session': thisSession,
+            'experiment': thisParadigm,
             'maskSpeed': thisDat.extraInfo['maskSpeed'],
             #'targLoc': thisDat.extraInfo['targLoc'],
             'startVal': thisDat.extraInfo['startVal'],
@@ -62,14 +64,14 @@ for thisSubjDir in allSubjDirs:
         wtdf = wtdf.append(tdf) # this is accumulating across subjects
         print thisFileName
         print 'reversals ' + str(thisDat.reversalIntensities[-nRevs:])
-    #print subjtdf
+    print subjtdf
     sumtdf = subjtdf.groupby('maskSpeed')
     sumtdf = sumtdf['threshold'].agg([np.mean])
     sumtdf = sumtdf.reset_index()
     sumtdf.rename(columns={'mean':'threshold'}, inplace=True)
     sumtdf['subj'] = thisSubj
-    sumtdf['session'] = thisSession
-    #print sumtdf
+    sumtdf['experiment'] = thisParadigm
+    # this, for some reason, yields only 1s, so this is later recalculated:
     sumtdf['normThresh'] = sumtdf['threshold'] / np.average(sumtdf['threshold'])
     wsumtdf = wsumtdf.append(sumtdf)
     # getting the subject directory name to use as the name for plots:
@@ -79,6 +81,8 @@ for thisSubjDir in allSubjDirs:
 #print wdf
 print 'whole threshold data frame'
 print wtdf
+# recalculation of normalised thresholds based on the overall mean:
+wsumtdf['normThresh'] = wsumtdf['threshold'] / np.average(wsumtdf['threshold'])
 print 'threshold summaries'
 print wsumtdf
 pd.DataFrame.to_csv(wsumtdf, dataDir + os.sep + 'groupThresholds.csv', index = False)

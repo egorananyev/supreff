@@ -3,6 +3,7 @@
 from __future__ import division
 from psychopy import data, gui, core
 from psychopy.tools.filetools import fromFile
+import psychopy
 import pylab, scipy
 import os
 import pandas as pd
@@ -54,18 +55,18 @@ sns.set(font_scale=1.8)
 #grid = sns.FacetGrid(wdf, row='targLoc', col='maskSpeed', hue='startVal', size=5.5)
 grid = sns.FacetGrid(wdf, col='maskSpeed', hue='startVal', size=5.5)
 grid.map(plt.plot, 'trial', 'contrast', marker='o')
-grid.set(ylim=(0,1))
+#grid.set(ylim=(0,1))
 
 # Output the figures.
 
 # Staircases.
-figFile = dataDir + os.sep + subjDirName + '_stairs.pdf'
+figFile = dataDir + os.sep + subjDirName + os.sep + subjDirName + '_stairs.pdf'
 pylab.savefig(figFile)
 print 'saved figure to: ' + figFile
 #pylab.show()
 
 # Raw thresholds.
-figFile = dataDir + os.sep + subjDirName + '_subjThresh.pdf'
+figFile = dataDir + os.sep + subjDirName + os.sep + subjDirName + '_subjThresh.pdf'
 g=sns.factorplot('maskSpeed', 'threshold', data=subjtdf, kind='box')
 g.set(ylim=(0,.5))
 pylab.savefig(figFile)
@@ -73,7 +74,7 @@ print 'saved figure to: ' + figFile
 #pylab.show()
 
 # Normalized thresholds.
-figFile = dataDir + os.sep + subjDirName + '_normThresh.pdf'
+figFile = dataDir + os.sep + subjDirName + os.sep + subjDirName + '_normThresh.pdf'
 g=sns.factorplot('maskSpeed', 'normThresh', data=subjtdf, kind='box')
 g.set(ylim=(0,5))
 pylab.savefig(figFile)

@@ -8,11 +8,12 @@ If you publish work using this script please cite the relevant PsychoPy publicat
 """
 
 from __future__ import division  # so that 1/3=0.333 instead of 1/3=0
-from psychopy import visual, core, data, event, sound, gui #,logging
+from psychopy import visual, core, data, event, gui #,logging
 from psychopy.constants import *  # things like STARTED, FINISHED
 import numpy as np # whole numpy lib is available, prepend 'np.'
 from numpy import sin, cos, tan, log, log10, pi, average, sqrt, std, deg2rad, rad2deg, linspace, asarray
 from numpy.random import random, randint, normal, shuffle
+from datetime import datetime
 import os  # handy system and path functions
 import itertools
 import shutil
@@ -27,30 +28,34 @@ os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'experiment': u'dsdm02a', u'domEye': u'r', u'participant': u'', u'training': u'1'}
+expInfo = {u'paradigm': u'dsdm02a', u'domEye': u'r', u'participant': u'', u'training': u'1'}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
-expInfo['date'] = data.getDateStr()  # add a simple timestamp
+# expInfo['date'] = data.getDateStr()  # add a simple timestamp
+timeNow = datetime.now()
+expInfo['date'] = datetime.now().strftime('%Y-%m-%d_%H%M')
 expInfo['expName'] = expName
 
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
-#filename = _thisDir + os.sep + 'data' + os.sep + '%s_%s_%s_%s_%s' %(expName, 
-filename = '..' + os.sep + 'data' + os.sep + '%s_%s_%s_%s_%s' %(expName, 
-    expInfo['participant'], expInfo['domEye'], expInfo['experiment'], expInfo['date'])
+dataDir = '..' + os.sep + 'data'
+fileName = '%s_%s_t%s_%s_dom-%s_%s' %(expName, 
+    expInfo['paradigm'], expInfo['training'], expInfo['participant'], 
+    expInfo['domEye'], expInfo['date'])
+filePath = dataDir + os.sep + fileName
+print filePath
 
 # ====================================================================================
 ## Initial variables.
 # Window boxes and black boxes (specified in degrees of visual angles [dva]):
 windowSize = 5.03 # 4.47
-windowOffsetX = 5.62 # 6.71
+windowOffsetX = 5.62 # 5.62 # 6.71
 windowOffsetY = 5.5 # 2.83 # 4.97
 windowThickness = 2
-targVertOffset = 1.5
+# targVertOffset = 1.5
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
 # Mask variables:
-nMaskElements = 300 # must be divisible by the number of directions allowed (below)
-maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
+nMaskElements = 248 # 300 must be divisible by the number of directions allowed (below)
 # Timing variables (in seconds) and trial number:
 preStimInterval = 1
 stimDuration = 2 # 3.6s in the Moors paper
@@ -58,24 +63,25 @@ ISIduration = 0.0 # 0.5 before
 fadeInNofFrames = 20 # the number of frames for the fade-in
 # Contrast:
 contrMin = 0
-contrMax = 1
+contrMax = 2
 # Condition-related variables
-conditionsFileName = 'cond-expt-' + expInfo['experiment'] + '.csv'
+conditionsFileName = 'cond-files'+os.sep+'cond-expt-'+expInfo['paradigm']+'.csv'
 if expInfo['training']=='1':
     train = True
 else:
     train = False
 # Other variables:
-contrSteps = [.3,.3,.2,.2,.2,.2,.1,.1,.1,.1,.05,.05,.05,.05,.03,.03,.03,.03,.02,.02]
+# contrSteps = [.6,.6,.3,.3,.3,.3,.2,.2,.1,.1,.05,.05,.03,.03] #14, for version b (max=2)
+contrSteps = [.3,.3,.2,.2,.1,.1,.05,.05,.02,.02,.01,.01,.005,.005,.003,.003] #16, for versions a or c (max=1)
 print conditionsFileName
 # ====================================================================================
 
 # An ExperimentHandler isn't essential but helps with data saving
 thisExp = data.ExperimentHandler(name=expName, version='', extraInfo=expInfo, 
     runtimeInfo=None, originPath=None, savePickle=True, saveWideText=True, 
-    dataFileName=filename)
+    dataFileName=filePath)
 ##save a log file for detail verbose info
-#logFile = logging.LogFile(filename+'.log', level=logging.EXP)
+#logFile = logging.LogFile(filePath+'.log', level=logging.EXP)
 #logging.console.setLevel(logging.WARNING)  # this outputs to the screen, not a file
 
 endExpNow = False  # flag for 'escape' or other condition => quit the exp
@@ -138,9 +144,10 @@ target = visual.Polygon(win=win, name='target',units='deg', edges = 3, size=[0.1
     fillColor=1.0, fillColorSpace='rgb', opacity=1, interpolate=True)
 # field size needs to be changed later on in the code:
 mask = visual.ElementArrayStim(win=win, name='mask', units='deg', 
-    fieldSize=(windowSize,windowSize), fieldShape='sqr', colors=(1,1,1), 
+    fieldSize=(windowSize,windowSize), fieldShape='circle',colors=(1,1,1),
     colorSpace='rgb', opacities=1, fieldPos=[0,0], sizes=1, nElements=nMaskElements, 
     elementMask=None, elementTex=None, sfs=3, xys=maskInitPos, interpolate=True)
+    # note that fieldSize has no effect
 # fixation crosses:
 fixationLeft = visual.GratingStim(win, name='fixationLeft', color='white', 
     tex=None, mask='circle', size=0.2, pos=[-windowOffsetX, windowOffsetY])
@@ -261,6 +268,10 @@ elif expInfo['domEye'] == 'l': # if the dominant eye is left...
     targOffsetX = windowOffsetX
     maskOffsetX = -windowOffsetX
 
+# Creating a directory for storing staircase outputs:
+if not os.path.exists(filePath):
+    os.makedirs(filePath)
+
 # Setting up each staircase, one by one:
 stairs=[] # setting up a variable containing all our staircases
 for thisCondition in stairConds:
@@ -274,10 +285,10 @@ for thisCondition in stairConds:
         nRevsPerStair = thisCondition['trainRevs']
         if nTrialsPerStair==0 and nRevsPerStair>0:
             termNRevs = True
-            print nRevsPerStair
+            print 'nRevsPerStair = ' + str(nRevsPerStair)
         elif nTrialsPerStair>0 and nRevsPerStair==0:
             termNTrials = True
-            print nTrialsPerStair
+            print 'nTrialsPerStair = ' + str(nTrialsPerStair)
         elif nTrialsPerStair==0 and nRevsPerStair==0:
             skipStairc = True
         else:
@@ -288,10 +299,10 @@ for thisCondition in stairConds:
         nRevsPerStair = thisCondition['exptRevs']
         if nTrialsPerStair==0 and nRevsPerStair>0:
             termNRevs = True
-            print nRevsPerStair
+            print 'nRevsPerStair = ' + str(nRevsPerStair)
         elif nTrialsPerStair>0 and nRevsPerStair==0:
             termNTrials = True
-            print nTrialsPerStair
+            print 'nTrialsPerStair = ' + str(nTrialsPerStair)
         elif nTrialsPerStair==0 and nRevsPerStair==0:
             print 'ATTENTION! Make sure that either exptTrials or exptRevs ' + \
                 'is *above* 0 in the conditions file!'
@@ -299,27 +310,18 @@ for thisCondition in stairConds:
             print 'ATTENTION! Make sure that either exptTrials or exptRevs ' + \
                 'is 0 in the conditions file!'
     thisStair = data.StairHandler(startVal = thisCondition['startVal'],
-        extraInfo = thisCondition, nTrials=nTrialsPerStair, nUp=1, nDown=2,
-        minVal = contrMin, maxVal = contrMax, stepSizes = contrSteps, stepType='lin')
+        extraInfo = thisCondition, nTrials=nTrialsPerStair, nReversals=nRevsPerStair,
+        nUp=1, nDown=2, minVal = contrMin, maxVal = contrMax, 
+        stepSizes = contrSteps[0:nRevsPerStair+1], stepType='lin')
     if not skipStairc:
         stairs.append(thisStair) # appending and 'setting' (?) this stairc
         thisStair.setExp(thisExp)
-        # Exporting the (empty) staircase:
-        stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-            expInfo['participant'], expInfo['domEye'], expInfo['experiment'], \
-            expInfo['date'] + '_train_' + thisStair.extraInfo['label']) #str(condN))
-        print stairFilename
-        thisStair.saveAsPickle(stairFilename)
-        thisStair.saveAsText(stairFilename)
     
 # Printing the attributes of the stairs:  
 #print dir(stairs[0])
 print stairs
-# Creating a directory for storing staircase outputs:
-if not os.path.exists(filename):
-    os.makedirs(filename)
 # Creating a copy of the Conditions file for book-keeping and analyses:
-shutil.copyfile(conditionsFileName, filename + os.sep + conditionsFileName)
+shutil.copyfile(conditionsFileName, filePath + os.sep + conditionsFileName)
 
 # Annoyingly, the right side of the following appears everywhere. More efficient to
 #   store this as a variable since it is fixed:
@@ -330,32 +332,50 @@ stimOffset = (preStimInterval + (stimDuration-win.monitorFramePeriod*0.75))
 while len(stairs)>0:
     print '===new=trial==='
     shuffle(stairs) # randomizing the appearance of the stairs for each trial
+    thisStair = stairs.pop()
     try:
         thisIntensity = thisStair.next() # contrast value
     except StopIteration:
-        stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-            expInfo['participant'], expInfo['domEye'], expInfo['exptNum'], \
-            expInfo['date'] + '_cond_' + thisStair.extraInfo['label'])
-        thisStair.saveAsPickle(stairFilename)
-        thisStair.saveAsText(stairFilename)
+        print 'reversals:'
+        print thisStair.reversalIntensities
+        print 'mean of final 2 reversals = %.3f' \
+            %(np.average(thisStair.reversalIntensities[-2:]))
+#         print 'mean of final 6 reversals = %.3f' \
+#             %(np.average(thisStair.reversalIntensities[-6:]))
+        stairFilePath = filePath + os.sep + '%s_stair-%s' %(fileName, 
+            thisStair.extraInfo['label']) 
+        thisStair.saveAsPickle(stairFilePath)
+        thisStair.saveAsText(stairFilePath)
         print "finished staircase"
     else:
     #for thisStair in stairs:
         # Based on the current staircase, assigning the current contrast value and
         #  other variables:
         thisIntensity = thisStair.next() # contrast value
+        if thisIntensity <= 1:
+            thisTargContr = thisIntensity
+            thisMaskContr = 1
+        else:
+            thisTargContr = 1
+            thisMaskContr = 2 - thisIntensity
         thisTargContin = thisStair.extraInfo['targContin']
-        thisTask = thisStair.extraInfo['taskDir1Loc2']
+        thisMaskContin = thisStair.extraInfo['maskContin']
+        thisTask = thisStair.extraInfo['taskDet0Dir1Loc2']
         # Variables set to random values:
         thisTargDir = np.random.choice([-1,1])
         thisTargLoc = np.random.choice([thisStair.extraInfo['targLoc1'], \
             thisStair.extraInfo['targLoc2']])
-        thisTargInitPosMulti = np.random.choice([thisStair.extraInfo['targInitPos1'],\
+        thisTargInitPos = np.random.choice([thisStair.extraInfo['targInitPos1'],\
             thisStair.extraInfo['targInitPos2'],thisStair.extraInfo['targInitPos3']])
+        print 'thisTargInitPos: ' + str(thisTargInitPos)
         # Correct response keys will be different for different tasks:
         if thisTask==1: #direction task
-            if thisTargDir==-1: thisTargCorrAns='comma' #ccw/left
-            elif thisTargDir==1: thisTargCorrAns='period' #cw/right
+            if thisTargContin:
+                if thisTargDir==-1: thisTargCorrAns='period' #cw
+                elif thisTargDir==1: thisTargCorrAns='comma' #ccw
+            else:
+                if thisTargDir==-1: thisTargCorrAns='comma' #left
+                elif thisTargDir==1: thisTargCorrAns='period' #right
             allKeys = ['comma','period']
         elif thisTask==2: #location task
             if thisTargLoc==-1: thisTargCorrAns='down' #below fixation
@@ -380,6 +400,8 @@ while len(stairs)>0:
             thisTargSize = thisStair.extraInfo['targSize']
             thisMaskSize = thisStair.extraInfo['maskSize']
         thisTargSpeed = thisStair.extraInfo['targSpeed']
+        if thisTargContin:
+            thisTargSpeed = (thisTargSpeed/thisTargLoc)*57.296
         thisTargColour = thisStair.extraInfo['targColour']
         thisMaskSpeed = thisStair.extraInfo['maskSpeed']
         thisMaskColRed = thisStair.extraInfo['maskColRed']
@@ -404,18 +426,31 @@ while len(stairs)>0:
         # sizes of the target and the mask:
         target.size = [thisTargSize, thisTargSize] # target size
         mask.sizes = [thisMaskSize, thisMaskSize] # mask size
-        # Maximum travel distance from the initial position:
-        maxTravDist = (windowSize - thisTargSize/1) / 2
-        # Based on the above max travel distance, setting the initial target position,
-        #   thereby finishing condition setup for the trial:
-        if thisTargContin:
-            thisTargInitPos = thisTargInitPosMulti
-        else:
-            thisTargInitPos = thisTargInitPosMulti*maxTravDist
-        print 'thisTargInitPos: ' + str(thisTargInitPos)
+        # Maximum travel distance from the centre - i.e., 'effective' radius:
+        maxTravDist = (windowSize - thisTargSize) / 2
         # Resetting the starting positions of mask elements - 
         #  (assuming that the mask is different for every trial):
-        maskInitPos = (np.random.rand(nMaskElements,2)*2-1)*maxTravDist
+        if thisMaskContin:
+            # Since the mask is moving circularly, x=position along the circle, y=r
+            maskInitPosX = np.random.rand(nMaskElements,1)
+            maskInitPosY = np.random.rand(nMaskElements,1)*0.85+0.15 # no clutter ar fixation
+            thisMaskSpeed = (thisMaskSpeed/maskInitPosY)*57.296
+            maskMovePosX = maskInitPosX
+            maskMovePosY = maskInitPosY
+            maskDirections = [-1,1] # ccw, cw
+        else: # discontinuous mask
+            maskInitPosY = (np.random.rand(nMaskElements,1)*1.6-1)*maxTravDist
+            # print maskInitPosY
+            # cord length = 2*r*(arccos(height/r))
+            cordLength = 2*1*np.sin(np.arccos(maskInitPosY/maxTravDist))
+            # print cordLength # looks correct
+            maskInitPosX = (np.random.rand(nMaskElements,1)*2-1)#*maxTravDist
+            # print maskInitPosX
+            maskInitPosX = maskInitPosX * cordLength
+            # print maskInitPosX
+            maskDirections = [[1,0],[-1,0],[0,1],[0,-1]] # right, left, up, down
+
+        maskSpeedMult = np.random.rand(nMaskElements,1)*.6+.7
 
         # Picking a list of directions. If there are four allowed directions, 
         #  one out of four needs to be picked for each element equally. 
@@ -428,12 +463,14 @@ while len(stairs)>0:
         # Setting the mask colours.
         maskColIDs = np.array([thisMaskColRed, thisMaskColBlue, thisMaskColGreen,
             thisMaskColYellow])
-        maskColAll = np.array([[1,-1,-1], [-1,-1,1], [-1,1,-1], [1,1,-1]])
+        maskColContr = -1 + 2*thisMaskContr
+        maskColAll = np.array([[maskColContr,-1,-1], [-1,-1,maskColContr],
+            [-1,maskColContr,-1], [maskColContr,maskColContr,-1]]) 
         maskColCurSet = maskColAll[maskColIDs==1]
         maskColNumReps = nMaskElements/np.shape(maskColCurSet)[0]
         maskColCurSetRepd = np.repeat(maskColCurSet, maskColNumReps, 0)
         maskColours = np.random.permutation(maskColCurSetRepd)
-        mask.colors = maskColours
+        mask.setColors(maskColours)
         
         #------Prepare to start Routine "trial"-------
         t = 0
@@ -445,8 +482,8 @@ while len(stairs)>0:
         key_pause = False
         windowLeft.lineColor = 'white'
         windowRight.lineColor = 'white'
-        # Vertical offset of the target
-        targOffsetY = windowOffsetY + thisTargLoc*targVertOffset
+        # Vertical offset of the target - this is only used in disc scen
+        targOffsetY = windowOffsetY + thisTargLoc #*targVertOffset
         # update component parameters for each repeat
         key_upDown = event.BuilderKeyResponse()  # create an object of type KeyResponse
         key_upDown.status = NOT_STARTED
@@ -531,24 +568,41 @@ while len(stairs)>0:
                 mask.tStart = t
                 mask.frameNStart = frameN
                 # setting the initial positions for the mask elements
-                mask.xys = maskInitPos 
+                maskInitPos = np.concatenate((maskInitPosX, maskInitPosY), axis=1)
+                mask.xys = maskInitPos
                 mask.fieldPos = [maskOffsetX, windowOffsetY]
                 mask.setAutoDraw(True)
+                
                 maskMoveClock.reset()
             if mask.status == STARTED and t > preStimInterval and ~key_pressed:
-                if tMaskMove == 0:
-                    tMaskMove = frameDur # maskMoveClock.getTime()
-                    tMaskRec = maskMoveClock.getTime()
-                    maskMovePos = maskInitPos
-                else:
-                    tMaskMove = maskMoveClock.getTime() - tMaskRec
-                    tMaskRec = maskMoveClock.getTime()
-                maskMovePos = np.array(maskMovePos) + np.array(maskDirs) * \
-                    thisMaskSpeed * tMaskMove
-                maskElemsOutside = np.where(abs(maskMovePos)>maxTravDist)
-                maskMovePos[maskElemsOutside] = -maxTravDist * \
-                    maskMovePos[maskElemsOutside] / abs(maskMovePos[maskElemsOutside])
-                mask.xys = maskMovePos
+                if thisMaskContin:
+                    maskCurPosX = maskInitPosX + \
+                        np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
+                        maskSpeedMult/360
+                    maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
+                    maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*\
+                        (maskInitPosX+np.array([maskDirs]).T*(t-mask.tStart)*\
+                        thisMaskSpeed*maskSpeedMult/360))
+                    mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
+                    mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
+                else: # discontinuous mask
+                    if tMaskMove == 0:
+                        tMaskMove = frameDur # maskMoveClock.getTime()
+                        tMaskRec = maskMoveClock.getTime()
+                        maskMovePos = maskInitPos
+                    else:
+                        tMaskMove = maskMoveClock.getTime() - tMaskRec
+                        tMaskRec = maskMoveClock.getTime()
+                    maskMovePos = np.array(maskMovePos) + np.array(maskDirs) * \
+                        thisMaskSpeed * tMaskMove
+                    posSq = np.sqrt(np.square(maskMovePos[:,0]) + \
+                        np.square(maskMovePos[:,1]))
+                    maskElemsOutside = np.where(posSq>=maxTravDist)
+                    # print maskElemsOutside
+                    maskMovePos[maskElemsOutside] = maskMovePos[maskElemsOutside] - \
+                        1.95 * np.square(np.array(maskDirs[maskElemsOutside])) * \
+                        maskMovePos[maskElemsOutside]
+                    mask.xys = maskMovePos
             if mask.status == STARTED and t >= stimOffset and key_pressed:
                 mask.setAutoDraw(False)
 
@@ -564,26 +618,33 @@ while len(stairs)>0:
                 curFrameN = frameN - target.frameNStart
                 # Target opacity
                 if curFrameN < fadeInNofFrames:
-                    target.opacity = thisIntensity * (curFrameN / fadeInNofFrames)
+                    target.opacity = thisTargContr * (curFrameN / fadeInNofFrames)
                 else:
-                    target.opacity = thisIntensity
+                    target.opacity = thisTargContr
                 # Clocking the time spent moving:
                 tMove = moveClock.getTime()
-                if edgeReached: # if the edge is reached, ...
-                    travDist = tMove*thisTargSpeed-maxTravDist
-                else: # otherwise, start from the initial target position:
-                    # note that this is only for the first cycle!
-                    travDist = tMove*thisTargSpeed+thisTargInitPos
-                # if the target has already moved beyond max allowed travel distance:
-                if travDist > maxTravDist:
-                    edgeReached = True
-                    moveClock.reset() # reset the movement clock (set it to zero)
-                    tMove = moveClock.getTime() # get the time
-                    # use that reset time for new travDist, but start from the edge:
-                    travDist = tMove*thisTargSpeed-maxTravDist
-                # target movement:
-                target.pos = [targOffsetX+thisTargDir*travDist, \
-                    targOffsetY]
+                if thisTargContin:
+                    targPosX=thisTargLoc*np.cos(2*np.pi*(thisTargInitPos+\
+                        thisTargDir*(t-target.tStart)*thisTargSpeed/360))+targOffsetX
+                    targPosY=thisTargLoc*np.sin(2*np.pi*(thisTargInitPos+\
+                        thisTargDir*(t-target.tStart)*thisTargSpeed/360))+windowOffsetY
+                    target.pos = [targPosX, targPosY]
+                else:
+                    if edgeReached: # if the edge is reached, reappear on the other end
+                        travDist = tMove*thisTargSpeed-(maxTravDist*.5)
+                    else: # otherwise, start from the initial target position:
+                        # note that this is only for the first cycle!
+                        travDist = tMove*thisTargSpeed+thisTargInitPos
+                    # if the target has already moved beyond max allowed travel dist
+                    if travDist > (maxTravDist*.5):
+                        edgeReached = True
+                        moveClock.reset() # reset the movement clock (set it to zero)
+                        tMove = moveClock.getTime() # get the time
+                        # use that reset time for new travDist, but start from the edge
+                        travDist = tMove*thisTargSpeed-(maxTravDist*.5)
+                    # target movement:
+                    target.pos = [targOffsetX+thisTargDir*travDist, \
+                        targOffsetY]
             if target.status == STARTED and t >= stimOffset:
                 target.setAutoDraw(False)
 
@@ -641,10 +702,12 @@ while len(stairs)>0:
                 thisStair.addData(key_upDown.corr)
                 thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
                 thisStair.addOtherData('visResp', visResp)
+                print 'reversal intensities for stair %s:' %(thisStair.extraInfo['label'])
+                print thisStair.reversalIntensities
                 # a response ends the routine
+
                 stairs.append(thisStair)
                 continueRoutine = False
-
             # *ISI* period
             if ISI.status == NOT_STARTED:
                 # keep track of start time/frame for later
@@ -686,21 +749,6 @@ while len(stairs)>0:
                 thisComponent.setAutoDraw(False)
 
         thisExp.nextEntry()
-    
-# Writing the separate outputs for the staircases:
-#dateStr = time.strtime("%b_%d_%H%M", time.localtime())
-#condN = 0 # the conditions are simply defined by their numbers
-for thisStair in stairs:
-#    condN += 1
-    print 'reversals:'
-    print thisStair.reversalIntensities
-    print 'mean of final 6 reversals = %.3f' \
-        %(np.average(thisStair.reversalIntensities[-6:]))
-    stairFilename = filename + os.sep + '%s_%s_%s_%s_%s' %(expName, \
-        expInfo['participant'], expInfo['domEye'], expInfo['experiment'], \
-        expInfo['date'] + '_cond_' + thisStair.extraInfo['label']) #str(condN))
-    thisStair.saveAsPickle(stairFilename)
-    thisStair.saveAsText(stairFilename)
 
 win.close()
 core.quit()
