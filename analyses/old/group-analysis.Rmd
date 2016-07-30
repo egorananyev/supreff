@@ -1,0 +1,78 @@
+---
+title: "Suppression Effectiveness: Group Report"
+author: "Egor Ananyev"
+output:
+  html_document:
+    toc: true
+    theme: united
+...
+
+# Translational motion
+```{r}
+## Loading the packages:
+library(ggplot2)
+library(plyr)
+library(gridExtra) # for multiplots
+library(ez)
+library(lme4)
+# preparing the data set:
+inputDir <- '/Users/Egor/Dropbox/Projects/supr-eff/data-transl/'
+fileName <- 'groupThresholds.csv'
+ds <- read.csv(paste(inputDir,fileName,sep=''))
+
+ds$subj<- as.factor(ds$subj)
+ds$maskSpeedF <- as.factor(ds$maskSpeed)
+
+# With numeric mask speed:
+ezANOVA(data=ds, dv=normThresh, within=maskSpeed, wid=subj)
+m1 <- lmer(normThresh~maskSpeed+(1|subj), ds)
+anova(m1)
+summary(m1)
+2 * (1 - pnorm(abs(data.frame(coef(summary(m1)))$t.value))) # approx p's
+# With factor mask speed:
+ezANOVA(data=ds, dv=normThresh, within=maskSpeedF, wid=subj)
+m2 <- lmer(normThresh~maskSpeedF+(1|subj), ds)
+anova(m2)
+summary(m2)
+2 * (1 - pnorm(abs(data.frame(coef(summary(m2)))$t.value))) # approx p's
+# Testing for quadratic trends:
+fitLin <- lm(normThresh~maskSpeed, data=ds)
+fitSquare <- nls(normThresh~a+b*maskSpeed^2, data=ds, start=list(a=1,b=0))
+summary(fitSquare)
+### to compute better starting values for convergence:
+f <- function(x,a,b) {a * exp(b * x)}
+st <- coef(nls(log(normThresh) ~ log(f(maskSpeed, a, b)), ds, start = c(a=1, b=1)))
+summary(nls(normThresh ~ f(maskSpeed, a, b), ds, start = st))
+```
+
+# Rotational motion
+```{r}
+# Preparing the data:
+inputDir <- '/Users/Egor/Dropbox/Projects/supr-eff/data-circ/'
+fileName <- 'groupThresholds.csv'
+ds <- read.csv(paste(inputDir,fileName,sep=''))
+ds$subj<- as.factor(ds$subj)
+dsFactor <- ds
+dsFactor$maskSpeed <- as.factor(ds$maskSpeed)
+# With numeric mask speed:
+ezANOVA(data=ds, dv=normThresh, within=maskSpeed, wid=subj)
+m1 <- lmer(normThresh~maskSpeed+(1|subj), ds)
+anova(m1)
+summary(m1)
+2 * (1 - pnorm(abs(data.frame(coef(summary(m1)))$t.value))) # approx p's
+# With factor mask speed:
+ezANOVA(data=dsFactor, dv=normThresh, within=maskSpeed, wid=subj)
+m2 <- lmer(normThresh~maskSpeed+(1|subj), dsFactor)
+anova(m2)
+summary(m2)
+2 * (1 - pnorm(abs(data.frame(coef(summary(m2)))$t.value))) # approx p's
+# Testing for quadratic trends
+fitLin <- lm(normThresh~maskSpeed, data=ds)
+fitSquare <- nls(normThresh~a+b*maskSpeed^2, data=ds, start=list(a=1,b=0))
+summary(fitSquare)
+anova(fitLin, fitSquare)
+### to compute better starting values for convergence:
+f <- function(x,a,b) {a * exp(b * x)}
+st <- coef(nls(log(normThresh) ~ log(f(maskSpeed, a, b)), ds, start = c(a=1, b=1)))
+summary(nls(normThresh ~ f(maskSpeed, a, b), ds, start = st))
+```

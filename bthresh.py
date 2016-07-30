@@ -28,7 +28,7 @@ os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'paradigm': u't-dsdm01b', u'domEye': u'r', u'participant': u'', u'training': u'1'}
+expInfo = {u'paradigm': u't-cscm01b', u'domEye': u'r', u'participant': u'', u'training': u'1'}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
 # expInfo['date'] = data.getDateStr()  # add a simple timestamp
@@ -48,7 +48,7 @@ print filePath
 ## Initial variables.
 # Window boxes and black boxes (specified in degrees of visual angles [dva]):
 windowSize = 5.03 # 4.47
-windowOffsetX = 5.62 # 5.62 # 6.71
+windowOffsetX = 5.62 # 5.6 # 6.7
 windowOffsetY = 5.5 # 2.83 # 4.97
 windowThickness = 2
 # targVertOffset = 1.5
@@ -57,7 +57,8 @@ blackBoxThickness = 10
 # Mask variables:
 nMaskElements = 248 # 300 must be divisible by the number of directions allowed (below)
 # Timing variables (in seconds) and trial number:
-stimMaxDur = 3 # 3.6s in the Moors paper
+targMaxDur = 3 # 3.6s in the Moors paper
+targThreshT = 2 # the subject needs to break before this time
 ISIduration = 0.0 # 0.5 before
 # Contrast:
 contrMin = 0
@@ -92,18 +93,19 @@ win = visual.Window(size=(1680, 1050), fullscr=False, screen=1, allowGUI=False,
 expInfo['frameRate']=win.getActualFrameRate()
 if expInfo['frameRate']!=None:
     frameDur = 1.0/round(expInfo['frameRate'])
+    frameRate = expInfo['frameRate']
 else:
     frameDur = 1.0/60.0 # couldn't get a reliable measure so guess
+    frameRate = 60
+print frameRate
 
 # Initialize components for Routine "instructions"
 instructionsClock = core.Clock()
-#instrText = visual.TextStim(win=win, ori=0, name='instrText',
-#    text='Indicate which direction the target is moving in:\n\n"comma (,)" = left\n"period (.)" = right \n\n The frame will turn *yellow* when the target disappeared.',
-#    font='Cambria', pos=[0, 0], height=1, wrapWidth=10, color='white', \
-#    colorSpace='rgb', opacity=1)
-instrText = visual.TextStim(win=win, ori=0, name='instrText',
-    text='', font='Cambria', pos=[0, 0], height=1, wrapWidth=10, color='white', \
-    colorSpace='rgb', opacity=1)
+instrText = visual.TextStim(win=win, ori=0, name='instrText', 
+                            text='Press any key to continue',
+                            font='Cambria', pos=[0, 0], height=1,
+                            wrapWidth=10, color='white', 
+                            colorSpace='rgb', opacity=1)
 
 # Initial positions of the mask:
 maskInitPos = np.zeros((nMaskElements,2))
@@ -132,7 +134,7 @@ blackBoxRight = visual.Rect(win=win, name='blackBoxRight', width=[blackBoxSize,
     pos=[windowOffsetX, windowOffsetY], lineWidth=blackBoxThickness, 
     lineColor=u'black', 
     lineColorSpace='rgb', fillColor=None, opacity=1, interpolate=True)
-ISI = core.StaticPeriod(win=win, screenHz=expInfo['frameRate'], name='ISI')
+ISI = core.StaticPeriod(win=win, screenHz=frameRate, name='ISI')
 # setting the edges to 3 (triangle) initially: this will change once ...
 # ... the attributes are read from the configuration file:
 target = visual.Polygon(win=win, name='target',units='deg', edges = 3, size=[0.1, 0.1],
@@ -201,6 +203,10 @@ while continueRoutine:
         instrKey.status = STARTED
         # keyboard checking is just starting
         event.clearEvents(eventType='keyboard')
+        fixationLeft.setAutoDraw(True)
+        fixationRight.setAutoDraw(True)
+        windowLeft.setAutoDraw(True)
+        windowRight.setAutoDraw(True)
     if instrKey.status == STARTED:
         theseKeys = event.getKeys()
         
@@ -291,14 +297,13 @@ for thisCondition in stairConds:
             termNTrials = True
             print 'nTrialsPerStair = ' + str(nTrialsPerStair)
         elif nTrialsPerStair==0 and nRevsPerStair==0:
-            print 'ATTENTION! Make sure that either exptTrials or exptRevs ' + \
-                'is *above* 0 in the conditions file!'
+            skipStairc = True
         else:
             print 'ATTENTION! Make sure that either exptTrials or exptRevs ' + \
                 'is 0 in the conditions file!'
     thisStair = data.StairHandler(startVal = thisCondition['startVal'],
         extraInfo = thisCondition, nTrials=nTrialsPerStair, nReversals=nRevsPerStair,
-        nUp=1, nDown=2, minVal = contrMin, maxVal = contrMax, 
+        nUp=2, nDown=1, minVal = contrMin, maxVal = contrMax, #~66% breaking rate
         stepSizes = contrSteps[0:nRevsPerStair+1], stepType='lin')
     if not skipStairc:
         stairs.append(thisStair) # appending and 'setting' (?) this stairc
@@ -322,10 +327,12 @@ while len(stairs)>0:
     except StopIteration:
         print 'reversals:'
         print thisStair.reversalIntensities
-        print 'mean of final 2 reversals = %.3f' \
-            %(np.average(thisStair.reversalIntensities[-2:]))
-#         print 'mean of final 6 reversals = %.3f' \
-#             %(np.average(thisStair.reversalIntensities[-6:]))
+        if train:
+            print 'mean of final 6 reversals = %.3f' \
+                  %(np.average(thisStair.reversalIntensities[-6:]))
+        else:
+            print 'mean of final 4 reversals = %.3f' \
+                  %(np.average(thisStair.reversalIntensities[-4:]))
         stairFilePath = filePath + os.sep + '%s_stair-%s' %(fileName, 
             thisStair.extraInfo['label']) 
         thisStair.saveAsPickle(stairFilePath)
@@ -347,15 +354,17 @@ while len(stairs)>0:
         thisTask = thisStair.extraInfo['taskDet0Dir1Loc2']
         # Timing variables:
         preStimInterval = np.random.rand(1)*.5
-        stimOffset = preStimInterval + stimMaxDur
-        fadeInNofFrames = round(expInfo['frameRate']*stimMaxDur)
+        stimOffset = preStimInterval + targMaxDur
+        print 'frame rate: ' + str(frameRate)
+        print 'targ maximum duration: ' + str(targMaxDur)
+        fadeInNofFrames = round(frameRate*targMaxDur)
         # Variables set to random values:
         thisTargDir = np.random.choice([-1,1])
         thisTargLoc = np.random.choice([thisStair.extraInfo['targLoc1'], \
             thisStair.extraInfo['targLoc2']])
         thisTargInitPos = np.random.choice([thisStair.extraInfo['targInitPos1'],\
             thisStair.extraInfo['targInitPos2'],thisStair.extraInfo['targInitPos3']])
-        print 'thisTargInitPos: ' + str(thisTargInitPos)
+        # print 'thisTargInitPos: ' + str(thisTargInitPos)
         thisTargVertices = thisStair.extraInfo['targVertices']
         thisMaskVertices = thisStair.extraInfo['maskVertices']
         # Need to make sure that the square diameteres are somewhat reduced to match
@@ -385,9 +394,9 @@ while len(stairs)>0:
         # What changes from trial to trial (will be different for dif expts)?
         print 'thisIntensity (contrast): start=%.2f, current=%.3f' \
             %(thisStair.extraInfo['startVal'], thisIntensity)
-        print 'thisTargLoc: ' + str(thisTargLoc)
-        print 'thisMaskSpeed: ' + str(thisMaskSpeed)
-        print 'thisTargDir: ' + str(thisTargDir)
+        # print 'thisTargLoc: ' + str(thisTargLoc)
+        # print 'thisMaskSpeed: ' + str(thisMaskSpeed)
+        # print 'thisTargDir: ' + str(thisTargDir)
         #print 'thisCondition: ' + str(thisCondition)
         # Setting up the colour, shape, and size specifications:
         target.setFillColor(thisTargColour)
@@ -452,6 +461,7 @@ while len(stairs)>0:
         tMaskMove = 0
         key_pressed = False
         key_pause = False
+        respRecorded = False
         windowLeft.lineColor = 'white'
         windowRight.lineColor = 'white'
         # Vertical offset of the target - this is only used in disc scen
@@ -504,14 +514,8 @@ while len(stairs)>0:
                 fixationRight.setAutoDraw(True)
                 blackBoxRight.setAutoDraw(True)
 
-            # if the target has already disappeared, yet the key is still not pressed\
-            #   continue, the trial with the blue boxes:
-            if ~key_pressed and t > stimOffset:
-                windowLeft.lineColor = 'blue'
-                windowRight.lineColor = 'blue'
-
             # pause text (after the response is made):
-            if key_pressed and ~key_pause and t > stimOffset:
+            if ~key_pause and t > stimOffset:
                 pauseTextLeft.setAutoDraw(True)
                 pauseTextRight.setAutoDraw(True)
 
@@ -524,9 +528,8 @@ while len(stairs)>0:
                 mask.xys = maskInitPos
                 mask.fieldPos = [maskOffsetX, windowOffsetY]
                 mask.setAutoDraw(True)
-                
                 maskMoveClock.reset()
-            if mask.status == STARTED and t > preStimInterval and ~key_pressed:
+            if mask.status == STARTED and t > preStimInterval and t < stimOffset:
                 if thisMaskContin:
                     maskCurPosX = maskInitPosX + \
                         np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
@@ -555,7 +558,7 @@ while len(stairs)>0:
                         1.95 * np.square(np.array(maskDirs[maskElemsOutside])) * \
                         maskMovePos[maskElemsOutside]
                     mask.xys = maskMovePos
-            if mask.status == STARTED and t >= stimOffset and key_pressed:
+            if mask.status == STARTED and t >= stimOffset:
                 mask.setAutoDraw(False)
 
             # *target* updates
@@ -569,17 +572,24 @@ while len(stairs)>0:
             if target.status == STARTED:
                 curFrameN = frameN - target.frameNStart
                 # Target opacity
-                if curFrameN < fadeInNofFrames:
-                    target.opacity = thisTargContr * (curFrameN / fadeInNofFrames)
+                if thisTargSpeed>0:
+                    targOpacity = ((targMaxDur/targThreshT)*thisIntensity) \
+                                  * (curFrameN/fadeInNofFrames)
+                    if targOpacity>1:
+                        target.opacity = 1
+                    else:
+                        target.opacity = targOpacity
                 else:
-                    target.opacity = thisTargContr
+                    target.opacity = 0
                 # Clocking the time spent moving:
                 tMove = moveClock.getTime()
                 if thisTargContin:
                     targPosX=thisTargLoc*np.cos(2*np.pi*(thisTargInitPos+\
-                        thisTargDir*(t-target.tStart)*thisTargSpeed/360))+targOffsetX
+                             thisTargDir*(t-target.tStart)*\
+                             thisTargSpeed/360))+targOffsetX
                     targPosY=thisTargLoc*np.sin(2*np.pi*(thisTargInitPos+\
-                        thisTargDir*(t-target.tStart)*thisTargSpeed/360))+windowOffsetY
+                             thisTargDir*(t-target.tStart)*thisTargSpeed/360))+\
+                             windowOffsetY
                     target.pos = [targPosX, targPosY]
                 else:
                     if edgeReached: # if the edge is reached, reappear on the other end
@@ -601,7 +611,7 @@ while len(stairs)>0:
                 target.setAutoDraw(False)
 
             # *key_space* updates
-            if ~key_pause and key_pressed and t >= stimOffset:
+            if ~key_pause and t >= stimOffset:
 #                spaceKey = event.getKeys(keyList=['space'])
                 if 'space' in event.getKeys(keyList=['space']):
                     print 'spacebar pressed'
@@ -621,34 +631,47 @@ while len(stairs)>0:
                 # check for quit:
                 if "escape" in theseKeys:
                     endExpNow = True
-                if len(theseKeys) > 0:  # at least one key was pressed
+                if len(theseKeys) > 0 and not key_pressed:
                     key_pressed = True
                     thisRT = key_upDown.clock.getTime()
                     # was this 'correct'? i.e., pressed .5<t<2s?
-                    if t > (preStimInterval+.5) and t < (stimOffset-1):
+                    if t > (preStimInterval+.5) and \
+                       t < (stimOffset-(targMaxDur-targThreshT)):
                         key_upDown.corr = 1
                         print '"correct" response - took ' + str(thisRT)
                     else:
                         key_upDown.corr = 0
                         print '"incorrect" response - took ' + str(thisRT)
 
-            # if key is not pressed, do nothing
+            # if key is not pressed, and the pause key is pressed, terminate the trial
+            if not key_pressed and key_pause and t>= stimOffset:
+                thisStair.addData(0) # recording as 'incorrect'
+                thisStair.addOtherData('key_upDown.rt', 0)
+                respRecorded = True
+                print '"incorrect" response recorded - button not pressed'
+                
             # if key is pressed, wait for the presentation time to pass to terminate\
             #   the trial:
             if key_pressed and key_pause and t >= stimOffset:
+                # update staircase with the last response:
+                thisStair.addData(key_upDown.corr)
+                thisStair.addOtherData('key_upDown.rt', thisRT)
+                respRecorded = True
+                print 'response recorded'
+
+            # if the response is recorded, terminate the trial
+            if respRecorded:
                 # update staircase with the random variable combination:
                 thisStair.addOtherData('thisTargDir', thisTargDir)
                 thisStair.addOtherData('thisTargLoc', thisTargLoc)
                 thisStair.addOtherData('thisTargInitPos', thisTargInitPos)
-                # update staircase with the last response:
-                thisStair.addData(key_upDown.corr)
-                thisStair.addOtherData('key_upDown.rt', key_upDown.rt)
-                print 'reversal intensities for stair %s:' %(thisStair.extraInfo['label'])
+                print 'reversal intensities for stair %s:' \
+                      %(thisStair.extraInfo['label'])
                 print thisStair.reversalIntensities
                 # a response ends the routine
-
                 stairs.append(thisStair)
                 continueRoutine = False
+
             # *ISI* period
             if ISI.status == NOT_STARTED:
                 # keep track of start time/frame for later

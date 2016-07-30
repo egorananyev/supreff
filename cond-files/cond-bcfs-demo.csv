@@ -1,0 +1,13 @@
+cond,label,taskDet0Dir1Loc2,targContin,maskContin,targOnsetJit,targThreshT,targMaxDur,targSize,targVertices,targSpeed,targColour,targLoc1,targLoc2,targInitPos1,targInitPos2,targInitPos3,maskVertices,maskSize,maskSpeed,maskColRed,maskColBlue,maskColGreen,maskColYellow,maskColGrey,trainTrials,exptTrials
+t1,ts1ms3,0,1,1,0.5,2,3,0.46,16,1,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,0,1
+t1,ts5ms3,0,1,1,0.5,2,3,0.46,16,5,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,0,1
+t1,ts3ms.3,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,0.3,1,1,1,1,0,0,1
+t1,ts3ms1,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,1,1,1,1,1,0,0,1
+t1,ts3ms2,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,2,1,1,1,1,0,0,1
+t1,ts3ms3,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,6,1
+t1,ts3ms5,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,5,1,1,1,1,0,0,1
+t1,ts3ms8,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,8,1,1,1,1,0,0,1
+t2,tlml,0,0,0,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,6,1
+t2,tlmr,0,0,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,6,1
+t2,trml,0,1,0,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,6,1
+t2,trmr,0,1,1,0.5,2,3,0.46,16,3,grey,-1.1,1.1,-1,0,1,4,0.46,3,1,1,1,1,0,6,1

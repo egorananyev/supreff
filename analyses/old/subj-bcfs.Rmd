@@ -1,0 +1,338 @@
+---
+title: "dm_bcfs_subject"
+author: "Egor Ananyev"
+date: '2016-03-03'
+output:
+    html_document:
+        toc: true
+---
+
+```{r}
+# The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
+# Read in the Excel worksheet:
+library(xlsx)
+library(ggplot2)
+library(plyr)
+library(matrixStats)
+library(splines)
+library(reshape)
+library(lme4)
+library(lmerTest)
+source('/Users/Egor/Dropbox/Prog/R/myFunctions/blackTheme.R')
+source('/Users/Egor/Dropbox/Prog/R/myFunctions/pvalfn.R')
+dataDir <- '/Users/Egor/Dropbox/Projects/supr-eff/data_bcfs1/'
+subjList <- read.xlsx(file=paste(dataDir,'Subjects.xlsx',sep=''), 1, colIndex=c(1:8), header=T)
+subjList$Subj<- as.factor(subjList$Subj)
+subjList$Sequence <- as.factor(subjList$Sequence)
+condList <- c('cscm','csdm','dscm','dsdm')
+# Some additional constants:
+nConds <- 6
+nc <- nConds-1 # the number of conditions without the blank
+shortRT <- .5
+outlFac <- 2.5 # outlier factor
+# Gathering the directories from the data directory:
+allDirs <- dir(dataDir)
+# Setting variables for the loop:
+ds <- data.frame()
+md <- data.frame()
+cbound <- data.frame()
+curSubj <- 1 #temp
+curCond <- 1 #temp
+for(curSubj in 1:length(subjList$Subj)){ #going through all dirs
+    for(curCond in 1:length(condList)){
+        grepPattern <- paste('dm_bcfs-', condList[curCond], '_t0_', subjList$Subj[curSubj], sep='')
+        subjDir <- allDirs[grep(grepPattern, allDirs)]
+        # With this directory, extracting data:
+        subjDataFN <- paste(dataDir, subjDir, '/', subjDir,
+                            '_trials.tsv', sep='')
+        if(file.exists(subjDataFN)){
+            ss <- read.table(subjDataFN, sep='\t', nrows=6, header=T)
+            sumss <- ss[,1:29]
+            sumss$motPat[sumss$cond=='bcfs-cscm'] <- '\nRotating Target\nRotating Mask\n '
+            sumss$motPat[sumss$cond=='bcfs-dsdm'] <- '\nLinear Target\nLinear Mask\n '
+            sumss$motPat[sumss$cond=='bcfs-csdm'] <- '\nRotating Target\nLinear Mask\n '
+            sumss$motPat[sumss$cond=='bcfs-dscm'] <- '\nLinear Target\nRotating Mask\n '
+            sumss$mpRotMask <- 0
+            sumss$mpRotMask[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-dscm'] <- 1
+            sumss$mpRotTarg <- 0
+            sumss$mpRotTarg[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-csdm'] <- 1
+            sumss$mpMatch <- 0
+            sumss$mpMatch[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-dsdm'] <- 1
+            # Inserting subject ID
+            sumss$SubjID <- subjList$Subj[curSubj]
+            sumss$subjThresh <- mean(as.numeric(subjList[curSubj, c('Thresh1', 'Thresh2', 'Thresh3')]), 
+                                     na.rm=T)
+            # I can't take RT_mean, because it doesn't exclude zeros
+            # Need to get the RTs on my own, and since the nTrials might
+            # differ...
+            nTrials <- ss$n[1]
+            rts <- ss[,30:(29+nTrials)]
+            rtna <- rts
+            rtna[rtna==0] <- NA
+            sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+            sumss$RTna_median <- c(rowMedians(as.matrix(rtna[1:nc,]),na.rm=T),0)
+            sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+            sumss$RTna_outlLow <- rowSums(rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd), na.rm=T)
+            sumss$RTna_outlHigh <- rowSums(rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd), na.rm=T)
+            rtna[rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd)] <- NA
+            rtna[rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd)] <- NA
+            sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+            sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+            sumss$RTna_norm <- c(sumss$RTna_mean[1:nc]/mean(sumss$RTna_mean[1:nc],na.rm=T),0)
+            # Binding the summary statistics with the empty data frame
+            ds <- rbind(ds, sumss)
+            # Gathering RTs:
+            cbound <- cbind(sumss,rtna)
+            # Renaming the trial columns for easy handling later: 
+            trialColNames <- paste('t',as.character(c(1:nTrials)),sep='')
+            colnames(cbound)[(length(cbound)-nTrials+1):(length(cbound))] <- trialColNames
+            # Melting the data set to have a trial per row:
+            melted <- melt(cbound, id=c('SubjID', 'subjThresh', 'motPat', 'maskSpeed','targSpeed',
+                                        'mpRotMask', 'mpRotTarg', 'mpMatch'),
+                       measure.vars=trialColNames)
+            # Renaming the variables for trial and RT:
+            melted <- rename(melted,c('variable'='trial','value'='RT'))
+            if(curCond==1 & curSubj==1){
+                md <- melted
+            }else{
+                md <- rbind(md, melted)
+            }
+            print(paste('Processed file',subjDataFN))
+        }else{
+            print(paste('File does not exist:',subjDataFN))
+        }
+    }
+}
+ds$Condition <- as.factor(substr(ds$cond, 6, 9))
+ds <- ds[ds$targSpeed>0,]
+md <- md[md$targSpeed!=0,] # deleting blank trials
+rownames(md)=NULL
+```
+
+## Individual thresholds
+```{r, fig.height=3, fig.width=4}
+# Calculating the subject means for the four thresholds:
+subjList$subjThresh <- rowMeans(subjList[,4:7], na.rm=F)
+# Excluding subjects with missing runs:
+subjList <- subjList[!is.na(subjList$subjThresh),]
+# Rearranging based on the threshold value:
+subjList <- arrange(subjList,subjThresh)
+subjList$altSubj <- as.character(c(101:(100+nrow(subjList))))
+# Line plots for non-broken trials:
+pdf("expt1thresh.pdf", width=4, height=3)
+ggplot(subjList, aes(x=altSubj, y=subjThresh, fill=Subj)) + geom_bar(stat='identity') + 
+    theme_bw() + labs(y='Contrast Threshold') + 
+    theme(legend.position='none', axis.title.x=element_blank(), axis.text.x = element_blank())
+dev.off()
+summary(subjList$subjThresh)
+sd(subjList$subjThresh) # standard deviation
+sum(subjList$subjThresh<1) # subjects with thresholds less than 1
+sum(subjList$subjThresh>1) # subjects with thresholds greater than 1
+```
+
+```{r, fig.height=3, fig.width=5}
+# Creating a data set with summaries per condition
+ss = ddply(ds, .(maskSpeed,Condition), summarise, `Mean Normalized RT`=mean(RTna_norm))
+ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=Condition, group=Condition)) +  geom_line() + geom_point() +  theme_black()
+```
+
+## Box plots
+
+### Raw
+```{r, fig.height=3, fig.width=7}
+ggplot(ds, aes(x=factor(maskSpeed), y=RTna_mean, colour=motPat)) +  geom_boxplot() + 
+    labs(x='Mask Speed', colour='Motion Pattern', y='Mean RT') + theme_black()
+```
+
+### Normalized
+```{r, fig.height=3, fig.width=7}
+ggplot(ds, aes(x=factor(maskSpeed), y=RTna_norm, colour=motPat)) +  geom_boxplot() + 
+    labs(x='Mask Speed', colour='Motion Pattern', y='Normalized RT') + theme_black()
+```
+
+## Smoothed on raw
+<!--
+### Quadratic effects
+```{r, fig.height=3, fig.width=7}
+ggplot(md, aes(x=maskSpeed, y=RT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='lm', formula=y~ns(x,2)) +
+    labs(x='Mask Speed', y='RT', colour='Motion Pattern') + theme_black()
+```
+-->
+
+### Cubic effects
+```{r, fig.height=3, fig.width=7}
+ggplot(md, aes(x=maskSpeed, y=RT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='lm', formula=y~ns(x,3)) +
+    labs(x='Mask Speed', y='RT', colour='Motion Pattern') + theme_black()
+```
+
+## Smoothed on normalized
+
+### Normalized data set
+```{r}
+# Compiling a data set containing two normalized values
+# Normalizing by subject
+mds <- ddply(md, .(SubjID), summarise, subjMean=mean(RT, na.rm=T))
+mdn <- merge(md,mds,by='SubjID')
+# Normalizing by motion pattern
+mdc <- ddply(md, .(SubjID, motPat), summarise, condMean=mean(RT, na.rm=T))
+mdn <- merge(mdn,mdc,by=c('SubjID','motPat'))
+# Computing the normalized RTs
+mdn$subjNormRT <- mdn$RT / mdn$subjMean
+mdn$condNormRT <- mdn$RT/mdn$condMean
+ddply(mdn,.(maskSpeed, motPat), summarise, stdev=sd(subjNormRT,na.rm=T))
+```
+
+### Cubic effects
+```{r, fig.height        =4, fig.width=7}
+# pdf("expt3b.pdf", width=5, height=3)
+ggplot(mdn, aes(x        =maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+# stat_smooth(method     ='loess', alpha=.15, aes(fill=motPat), show_guide=F) + 
+stat_smooth(method       ='lm', formula=y~ns(x,3), alpha=.15, aes(fill=motPat), show_guide=F) + 
+geom_point(data          =ds, aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+position                 =position_dodge(width=.4), size=.9) +
+labs(x                   =expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+y                        ='Normalized RT', colour='Motion Pattern\n') + 
+scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_black()
+# dev.off()
+# pdf("expt3bw.pdf", width=5, height=3)
+ggplot(mdn, aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    # stat_smooth(method='loess', alpha=.1, aes(fill=motPat), show_guide=F) + 
+    stat_smooth(method='lm', formula=y~ns(x,3), alpha=.1, aes(fill=motPat), show_guide=F) + 
+    geom_point(data=ds, aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.5), size=1, alpha=.5) + # square is shape=7
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='Motion Pattern\n') + 
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw()
+# dev.off()
+```
+
+### High/Low Threshold Participants
+```{r, fig.height=4, fig.width=7}
+# pdf("expt1_ht.pdf", width=5, height=3)
+ggplot(mdn[mdn$subjThresh>median(mdn$subjThresh),],
+       aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='lm', formula=y~ns(x,3), alpha=.15, aes(fill=motPat), show_guide=F) + 
+    geom_point(data=ds[ds$subjThresh>median(mdn$subjThresh),],
+               aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.5), alpha=.5, size=1) +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='Motion Pattern\n') + 
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw()
+# dev.off()
+# pdf("expt1_lt.pdf", width=5, height=3)
+ggplot(mdn[mdn$subjThresh<median(mdn$subjThresh),],
+       aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='lm', formula=y~ns(x,3), alpha=.1, aes(fill=motPat), show_guide=F) + 
+    geom_point(data=ds[ds$subjThresh<median(mdn$subjThresh),],
+               aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.5), alpha=.5, size=1) +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='Motion Pattern\n') + 
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw()
+# dev.off()
+```
+
+## Simple model
+Running a simple linear model reveals an effect of target speed, but not the mask speed or the interaction between mask and target speed. The main effect of mask speed does, however, approach significance.
+```{r}
+# Preparing the data set:
+md$trialN <- substr(md$trial, 2, 3)
+md$trialN <- as.numeric(md$trialN)
+# Investigating if the trial number has any effect; this will be included as a nuisance var:
+m0 <- lmer(RT~trialN+(1|SubjID), md)
+summary(m0)
+
+# Checking the contribution of the vars of interest:
+m1_maskSpeed <- lmer(RT~trialN+maskSpeed+(1|SubjID), md)
+anova(m0, m1_maskSpeed)
+summary(m1_maskSpeed)
+m1_motPat <- lmer(RT~trialN+motPat+(1|SubjID), md)
+anova(m0, m1_motPat)
+m2 <- lmer(RT~trialN+motPat+maskSpeed+(1|SubjID), md)
+anova(m1_maskSpeed, m2)
+anova(m1_motPat, m2)
+m2_int <- lmer(RT~trialN+maskSpeed*motPat+(1|SubjID), md)
+anova(m2, m2_int)
+m2_simple <- lmer(RT~maskSpeed*motPat+(1|SubjID), md)
+anova(m2_simple)
+summary(m2_simple)
+
+# Add subject threshold to the mix
+m1_st <- lmer(RT~trialN+subjThresh+(1|SubjID), md)
+anova(m0, m1_st)
+m2_stPmotPat <- lmer(RT~trialN+subjThresh+motPat+(1|SubjID), md)
+m2_stXmotPat <- lmer(RT~trialN+subjThresh*motPat+(1|SubjID), md)
+anova(m2_stPmotPat, m2_stXmotPat)
+summary(m2_stXmotPat)
+m2_stPmaskSpeed <- lmer(RT~trialN+subjThresh+maskSpeed+(1|SubjID), md)
+m2_stXmaskSpeed <- lmer(RT~trialN+subjThresh*maskSpeed+(1|SubjID), md)
+anova(m2_stPmaskSpeed, m2_stXmaskSpeed)
+
+# Full model
+m_full <- lmer(RT~trialN+subjThresh*motPat*maskSpeed+(1|SubjID), md)
+summary(m_full)
+pvalfn(m_full)
+
+r2.corr.mer <- function(m) {
+  lmfit <-  lm(model.response(model.frame(m)) ~ fitted(m))
+  summary(lmfit)$r.squared
+}
+# e.g.,
+# r2.corr.mer(m2_int)
+
+# Tukey
+Tukey_aov <- aov(RT~maskSpeed+motPat, data=md)
+TukeyHSD(Tukey_aov, 'motPat', ordered=T)
+```
+
+## Target/mask types
+```{r}
+# Preparing the data set:
+md$trialN <- substr(md$trial, 2, 3)
+md$trialN <- as.numeric(md$trialN)
+# Investigating if the trial number has any effect; this will be included as a nuisance var:
+m0 <- lmer(RT~trialN+(1|SubjID), md)
+summary(m0)
+m0_maskSpeed <- lmer(RT~trialN+maskSpeed+(1|SubjID), md)
+
+# Full model
+m_mpType_clean <- lmer(RT~trialN+mpRotMask*maskSpeed+mpRotTarg*maskSpeed+(1|SubjID), md)
+pvalfn(m_mpType_clean)
+m_mpType_full <- lmer(RT~trialN+subjThresh*mpRotMask*mpRotTarg*maskSpeed+(1|SubjID), md)
+pvalfn(m_mpType_full)
+
+# Contribution of target motion pattern beyond base model?
+m_mpTarg <- lmer(RT~trialN+mpRotTarg+(1|SubjID), md)
+pvalfn(m_mpTarg)
+anova(m0,m_mpTarg)
+
+# Contribution of mask motion pattern beyond base model?
+m_mpMask <- lmer(RT~trialN+mpRotMask+(1|SubjID), md)
+pvalfn(m_mpMask)
+anova(m0,m_mpMask)
+
+# Interaction between mask and target motion patterns?
+m_mpMaskPTarg <- lmer(RT~trialN+mpRotMask+mpRotTarg+(1|SubjID), md)
+m_mpMaskXTarg <- lmer(RT~trialN+mpRotMask*mpRotTarg+(1|SubjID), md)
+pvalfn(m_mpMaskXTarg)
+anova(m_mpMaskPTarg, m_mpMaskXTarg)
+```
+
+## Mask/target congruence
+```{r}
+# Is there a contribution of matching the target and mask patterns?
+m_mpMatch <- lmer(RT~trialN+subjThresh+mpMatch+(1|SubjID), md)
+pvalfn(m_mpMatch)
+# anova(m_subjThresh, m_mpMatch)
+
+# Full model, with the speeds:
+m_mpMatch_clean <- lmer(RT~trialN+mpMatch*maskSpeed+(1|SubjID),md)
+pvalfn(m_mpMatch_clean)
+m_mpMatch_full <- lmer(RT~trialN+mpMatch*maskSpeed*subjThresh+(1|SubjID),md)
+pvalfn(m_mpMatch_full)
+
+# library('ez')
+# ezANOVA(data=md, dv=RT, within=)
+```

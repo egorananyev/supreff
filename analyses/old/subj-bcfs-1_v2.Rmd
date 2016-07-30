@@ -1,0 +1,130 @@
+---
+title: "dm_bcfs_subject"
+author: "Egor Ananyev"
+date: '2016-03-03'
+output: html_document
+---
+
+```{r}
+# The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
+# Read in the Excel worksheet:
+library(xlsx)
+library(ggplot2)
+library(plyr)
+library(matrixStats)
+library(splines)
+source('/Users/Egor/Dropbox/Prog/R/myFunctions/blackTheme.R')
+dataDir <- '/Users/Egor/Dropbox/Projects/supr-eff/data_bcfs1/'
+subjList <- read.xlsx(file=paste(dataDir,'Subjects.xlsx',sep=''), 1, colIndex=c(1:8), header=T)
+subjList$Subj<- as.factor(subjList$Subj)
+subjList$Sequence <- as.factor(subjList$Sequence)
+condList <- c('cscm','csdm','dscm','dsdm')
+# Other constants:
+nConds <- 6
+nc <- nConds - 1
+shortRT <- .5
+outlFac <- 2.5 # outlier factor
+# Gathering the directories from the data directory:
+allDirs <- dir(dataDir)
+# Setting variables for the loop:
+ds <- data.frame()
+allrts <- data.frame()
+aarts <- data.frame()
+rtds <- data.frame()
+# curSubj <- 1 #temp
+# curCond <- 1 #temp
+for(curSubj in 1:3){#length(subjList$Subj)){ #going through all dirs
+    for(curCond in 1:length(condList)){
+        grepPattern <- paste('dm_bcfs-', condList[curCond], '_t0_', subjList$Subj[curSubj], sep='')
+        subjDir <- allDirs[grep(grepPattern, allDirs)]
+        # With this directory, extracting data:
+        subjDataFN <- paste(dataDir, subjDir, '/', subjDir,
+                            '_trials.tsv', sep='')
+        if(file.exists(subjDataFN)){
+            ss <- read.table(subjDataFN, sep='\t', nrows=6, header=T)
+            sumss <- ss[,1:29]
+            # Inserting subject ID
+            sumss$SubjID <- subjList$Subj[curSubj]
+            sumss$subjThresh <- subjList$subjThresh[curSubj]
+            # I can't take RT_mean, because it doesn't exclude zeros
+            # Need to get the RTs on my own, and since the nTrials might
+            # differ...
+            nTrials <- ss$n[1]
+            rts <- ss[,30:(29+nTrials)]
+            # Binding the summary statistics with the empty data frame
+            if(curCond==1){
+                allrts <- rts
+            }else{
+                allrts <- cbind(rts,allrts)
+            }
+            print(paste('Processed file',subjDataFN))
+        }else{
+            print(paste('File does not exist:',subjDataFN))
+        }
+    }
+    # Counting and removing RTs<shortRT and non-responses
+    sumss$cnt_RTshort <- c(rowSums(allrts[1:nc,]<shortRT),0) 
+    sumss$cnt_RTna <- rowSums(allrts==0)
+    # RTs with exclusions as NA:
+    rtna <- allrts
+    rtna[rtna==0] <- NA
+    rtna[rtna<shortRT] <- NA
+    # Calculating summary stats for the conditions (mean, median, SD, number of outliers):
+    sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+    sumss$RTna_median <- c(rowMedians(as.matrix(rtna[1:nc,]),na.rm=T),0)
+    sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+    sumss$RTna_outlLow <- rowSums(rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd), na.rm=T)
+    sumss$RTna_outlHigh <- rowSums(rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd), na.rm=T)
+    # Removing the outliers from the data set:
+    rtna[rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd)] <- NA
+    rtna[rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd)] <- NA
+    # Recalculating the summary stats:
+    sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+    sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+    # Computing normalized means:
+    sumss$RTna_norm <- c(sumss$RTna_mean[1:nc]/mean(sumss$RTna_mean[1:nc],na.rm=T),0)
+    # Filling up aarts only after rtna has been cleaned up
+    if(curSubj==1){
+        aarts <- cbind(sumss,rtna)
+    }else{
+        aarts <- rbind(aarts,cbind(sumss,rtna))
+    }
+    # Binding the summary statistics with the empty data frame
+    ds <- rbind(ds, sumss)
+    rtds <- rbind(rtds,aarts)
+}
+ds$Condition <- as.factor(substr(ds$cond, 6, 9))
+ds$maskSpeed <- as.factor(ds$maskSpeed)
+ds <- ds[ds$targSpeed>0,]
+
+ds$maskSpeed <- as.factor(ds$maskSpeed)
+ds$targSpeed <- as.factor(ds$targSpeed)
+ds <- ds[ds$targSpeed!=0,]
+
+# Splitting subjects into high- and low-threshold pools:
+subjTl <- subjList$Subj[subjList$subjThresh<1]
+subjTh <- subjList$Subj[subjList$subjThresh>1]
+dsTl <- ds[ds$SubjID %in% subjTl,]
+dsTh <- ds[ds$SubjID %in% subjTh,]
+```
+
+```{r}
+# Line plots of raw RTs per subject
+ggplot(ds[ds$Condition=='cscm',], aes(x=maskSpeed, y=RT3_mean, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='csdm',], aes(x=maskSpeed, y=RT3_mean, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='dscm',], aes(x=maskSpeed, y=RT3_mean, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='dsdm',], aes(x=maskSpeed, y=RT3_mean, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+# Line plots of normalized RTs
+ggplot(ds[ds$Condition=='cscm',], aes(x=maskSpeed, y=RT3_norm, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='csdm',], aes(x=maskSpeed, y=RT3_norm, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='dscm',], aes(x=maskSpeed, y=RT3_norm, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+ggplot(ds[ds$Condition=='dsdm',], aes(x=maskSpeed, y=RT3_norm, group=SubjID, colour=SubjID)) +  geom_line() + geom_point() + theme_black()
+```
+
+```{r, fig.height=4, fig.width=7}
+# Box plots of normalized RTs
+ggplot(ds, aes(x=maskSpeed, y=RTna_norm, colour=Condition)) +  geom_boxplot() + theme_black()
+# Creating a data set with summaries per condition
+ss = ddply(ds, .(maskSpeed,Condition), summarise, `Mean Normalized RT`=mean(RTna_norm))
+ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=Condition, group=Condition)) +  geom_line() + geom_point() +  theme_black()
+```

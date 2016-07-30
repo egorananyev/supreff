@@ -17,10 +17,11 @@ from datetime import datetime
 import os  # handy system and path functions
 import itertools
 import shutil
-
 import pyglet
 allScrs = pyglet.window.get_platform().get_default_display().get_screens()
 print allScrs
+
+# Import the threshold information for the subject:
 
 # Ensure that relative paths start from the same directory as this script
 _thisDir = os.path.dirname(os.path.abspath(__file__))
@@ -28,24 +29,23 @@ os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'paradigm': u'bcfs-dsdm', u'domEye': u'r', u'participant': u'', u'training': u'1'}
+expInfo = {u'session': u's', u'domEye': u'r', u'participant': u'', u'thresh': u'',
+           u'training': u'0'}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
 # expInfo['date'] = data.getDateStr()  # add a simple timestamp
 timeNow = datetime.now()
 expInfo['date'] = datetime.now().strftime('%Y-%m-%d_%H%M')
 expInfo['expName'] = expName
+subjThresh = float(expInfo['thresh'])
+print subjThresh
 
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
 dataDir = '..' + os.sep + 'data'
-fileName = '%s_%s_t%s_%s_dom-%s_%s' %(expName, 
-    expInfo['paradigm'], expInfo['training'], expInfo['participant'], 
-    expInfo['domEye'], expInfo['date'])
+fileName = '%s_p-%s_dom-%s_%s_t%s_%s' %(expName, expInfo['participant'],
+    expInfo['domEye'], expInfo['session'], expInfo['training'], expInfo['date'])
 filePath = dataDir + os.sep + fileName
 print filePath
-
-# Import the threshold information for the subject:
-subjThresh = 0.8 #TEMP
 
 # ====================================================================================
 ## Initial variables.
@@ -68,7 +68,7 @@ ISIduration = 0.0 # 0.5 before
 contrMin = 0
 contrMax = 2
 # Condition-related variables
-conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs'+'.csv'
+conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-4-2'+'.csv'
 if expInfo['training']=='1':
     train = True
 else:
@@ -216,7 +216,7 @@ curCond = 0
 commonNTrials = []
 for thisCondition in condList:
     skipCond = False
-    if thisCondition['cond']==expInfo['paradigm']:
+    if thisCondition['cond']==expInfo['session']:
         if train:
             nTrials = thisCondition['trainTrials']
             if nTrials==0:
@@ -314,6 +314,7 @@ for thisTrial in trials:
     # Annoyingly, the right side of the following appears everywhere. More 
     # efficient to store this as a variable since it is fixed (for a given trial):
     preStimInterval = np.random.rand(1)*thisTrial['targOnsetJit']
+    trials.data.add('thisPreStimInterval', preStimInterval)
     stimOffset = (preStimInterval + (thisTrial['targMaxDur']-win.monitorFramePeriod*0.75))
     fadeInNofFrames = round( frameRate * (stimOffset - preStimInterval) )
     thisTargContin = thisTrial['targContin']
@@ -321,11 +322,14 @@ for thisTrial in trials:
     thisTask = thisTrial['taskDet0Dir1Loc2']
     # Variables set to random values:
     thisTargDir = np.random.choice([-1,1])
+    trials.data.add('thisTargDir', thisTargDir)
     thisTargLoc = np.random.choice([thisTrial['targLoc1'], \
         thisTrial['targLoc2']])
+    trials.data.add('thisTargLoc', thisTargLoc)
     thisTargInitPos = np.random.choice([thisTrial['targInitPos1'],\
         thisTrial['targInitPos2'],thisTrial['targInitPos3']])
-    print 'thisTargInitPos: ' + str(thisTargInitPos)
+    trials.data.add('thisTargInitPos', thisTargInitPos)
+    # print 'thisTargInitPos: ' + str(thisTargInitPos)
     thisTargVertices = thisTrial['targVertices']
     thisMaskVertices = thisTrial['maskVertices']
     # Need to make sure that the square diameteres are somewhat reduced to match
@@ -343,14 +347,18 @@ for thisTrial in trials:
         thisTargSize = thisTrial['targSize']
         thisMaskSize = thisTrial['maskSize']
     thisTargSpeed = thisTrial['targSpeed']
+    print 'thisTargSpeed: ' + str(thisTargSpeed)
     if thisTargSpeed == 0:
         print 'blank trial'
+        allSpeeds = [.3,1,2,3,5,8] # kind of sketchy to put it manually; need to fix it
+        thisMaskSpeed = allSpeeds[np.random.choice(6)]
     else:
         print 'non-blank trial'
+        thisMaskSpeed = thisTrial['maskSpeed']
     if thisTargContin:
         thisTargSpeed = (thisTargSpeed/thisTargLoc)*57.296
+        print 'thisTargSpeed: ' + str(thisTargSpeed)
     thisTargColour = thisTrial['targColour']
-    thisMaskSpeed = thisTrial['maskSpeed']
     thisMaskColRed = thisTrial['maskColRed']
     thisMaskColGreen = thisTrial['maskColGreen']
     thisMaskColYellow = thisTrial['maskColYellow']
@@ -359,9 +367,9 @@ for thisTrial in trials:
     targMaxDur = thisTrial['targMaxDur']
     targThreshT = thisTrial['targThreshT']
     # What changes from trial to trial (will be different for dif expts)?
-    print 'thisTargLoc: ' + str(thisTargLoc)
+    # print 'thisTargLoc: ' + str(thisTargLoc)
     print 'thisMaskSpeed: ' + str(thisMaskSpeed)
-    print 'thisTargDir: ' + str(thisTargDir)
+    # print 'thisTargDir: ' + str(thisTargDir)
     #print 'thisTrial: ' + str(thisTrial)
     # Setting up the colour, shape, and size specifications:
     target.setFillColor(thisTargColour)
@@ -410,7 +418,10 @@ for thisTrial in trials:
     # Setting the mask colours.
     maskColIDs = np.array([thisMaskColRed, thisMaskColBlue, thisMaskColGreen,
         thisMaskColYellow])
-    thisMaskContr = .25 # Legacy. This was used before to adjust the brightness of the mask.
+    if subjThresh > 1:
+        thisMaskContr = 2 - subjThresh
+    else:
+        thisMaskContr = 1
     maskColContr = -1 + 2*thisMaskContr
     maskColAll = np.array([[maskColContr,-1,-1], [-1,-1,maskColContr],
         [-1,maskColContr,-1], [maskColContr,maskColContr,-1]]) 
@@ -544,8 +555,13 @@ for thisTrial in trials:
         if target.status == STARTED and t<stimOffset:
             curFrameN = frameN - target.frameNStart
             # Target opacity
-            if thisTargSpeed>0:
-                target.opacity = ((targMaxDur/targThreshT)*subjThresh) * (curFrameN/fadeInNofFrames)
+            if thisTargSpeed!=0:
+                targOpacity = ((targMaxDur/targThreshT)*subjThresh) * \
+                              (curFrameN/fadeInNofFrames)
+                if targOpacity>1:
+                    target.opacity = 1
+                else:
+                    target.opacity = targOpacity
             else:
                 target.opacity = 0
             # Clocking the time spent moving:
@@ -589,9 +605,8 @@ for thisTrial in trials:
             # check for quit:
             if "escape" in theseKeys:
                 endExpNow = True
-            if len(theseKeys) > 0:  # at least one key was pressed
+            if len(theseKeys) > 0 and not key_pressed:
                 print 'key pressed'
-                # key_upDown.keys = theseKeys[-1]  # just the last key pressed
                 thisRT = key_upDown.clock.getTime()
                 key_pressed = True
 

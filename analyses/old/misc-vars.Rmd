@@ -1,0 +1,27 @@
+---
+title: "Misc Vars"
+author: "Egor Ananyev"
+date: "21 April 2015"
+output: html_document
+---
+
+# Preparing the data
+```{r}
+# Loading packages and the data.
+library(plyr)
+library(lme4)
+df <- read.csv('/Users/Egor/Dropbox/Projects/supr-eff/data/all_trials.csv')
+head(df)
+# Important to have some variables converted to factor.
+df$maskSpeed <- as.factor(df$maskSpeed)
+df$session<- as.factor(df$session)
+df$startVal<- as.factor(df$startVal)
+df$subj<- as.factor(df$subj)
+# The resulting data frame is as follows:
+str(df)
+```
+
+```{r}
+contrBase <- lm(contrast ~ )
+```
+
