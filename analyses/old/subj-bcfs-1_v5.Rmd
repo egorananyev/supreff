@@ -1,0 +1,502 @@
+---
+title: "Effects of matching mask/target motion pattern and speed"
+author: "Egor Ananyev"
+date: '2016-03-03'
+output:
+    html_document:
+        toc: true
+---
+
+<style type="text/css">
+body, td{
+  font-family: Cambria;
+}
+code.r{
+  font-family: Inconsolata;
+}
+</style>
+
+# Preparing the data
+
+## Loading the packages and data
+```{r set-options, message=F, warning=F}
+options(width=108)
+out=F
+# The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
+library(xlsx)
+library(ggplot2)
+library(plyr)
+library(matrixStats)
+library(splines)
+library(reshape)
+library(lme4)
+library(lmerTest)
+# Neat functions:
+db <- '/home/egor/Dropbox/' # on Linux
+db <- '~/Dropbox/' # on Mac
+db <- '/Users/Egor/Dropbox/' # Windows
+source(paste(db, 'Prog/R/myFunctions/blackTheme.R', sep=''))
+source(paste(db, 'Prog/R/myFunctions/pvalfn.R', sep=''))
+# Read in the Excel worksheet:
+dataDir <- paste(db, 'Projects/supr-eff/data_bcfs1/', sep='')
+subjList <- read.xlsx(file=paste(dataDir,'Subjects.xlsx',sep=''), 1, colIndex=c(1:8), header=T)
+subjList$Subj<- as.factor(subjList$Subj)
+subjList$Sequence <- as.factor(subjList$Sequence)
+condList <- c('cscm','csdm','dscm','dsdm')
+# Some additional constants:
+nConds <- 6
+nc <- nConds-1 # the number of conditions without the blank
+shortRT <- .5
+outlFac <- 2.5 # outlier factor
+# Gathering the directories from the data directory:
+allDirs <- dir(dataDir)
+```
+
+## Pre-processing the data
+```{r}
+# Setting variables for the loop:
+ds <- data.frame()
+md <- data.frame()
+cbound <- data.frame()
+curSubj <- 1 #temp
+curCond <- 1 #temp
+for(curSubj in 1:length(subjList$Subj)){ #going through all dirs
+    for(curCond in 1:length(condList)){
+        grepPattern <- paste('dm_bcfs-', condList[curCond], '_t0_', subjList$Subj[curSubj], sep='')
+        subjDir <- allDirs[grep(grepPattern, allDirs)]
+        # With this directory, extracting data:
+        subjDataFN <- paste(dataDir, subjDir, '/', subjDir,
+                            '_trials.tsv', sep='')
+        if(file.exists(subjDataFN)){
+            ss <- read.table(subjDataFN, sep='\t', nrows=6, header=T)
+            sumss <- ss[,1:29]
+            sumss$motPat[sumss$cond=='bcfs-cscm'] <- 'Rotating Target\nRotating Mask'
+            sumss$motPat[sumss$cond=='bcfs-dsdm'] <- 'Linear Target\nLinear Mask'
+            sumss$motPat[sumss$cond=='bcfs-csdm'] <- 'Rotating Target\nLinear Mask'
+            sumss$motPat[sumss$cond=='bcfs-dscm'] <- 'Linear Target\nRotating Mask'
+            sumss$mpRotMask <- 0
+            sumss$mpRotMask[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-dscm'] <- 1
+            sumss$mpRotTarg <- 0
+            sumss$mpRotTarg[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-csdm'] <- 1
+            sumss$mpMatch <- 0
+            sumss$mpMatch[sumss$cond=='bcfs-cscm' | sumss$cond=='bcfs-dsdm'] <- 1
+            # Inserting subject ID
+            sumss$SubjID <- subjList$Subj[curSubj]
+            sumss$subjThresh <- mean(as.numeric(subjList[curSubj, 
+                                                         c('Thresh1', 'Thresh2', 'Thresh3')]), 
+                                     na.rm=T)
+            # I can't take RT_mean, because it doesn't exclude zeros
+            # Need to get the RTs on my own, and since the nTrials might
+            # differ...
+            nTrials <- ss$n[1]
+            rts <- ss[,30:(29+nTrials)]
+            rtna <- rts
+            rtna[rtna==0] <- NA
+            sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+            sumss$RTna_median <- c(rowMedians(as.matrix(rtna[1:nc,]),na.rm=T),0)
+            sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+            sumss$RTna_outlLow <- rowSums(rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd), na.rm=T)
+            sumss$RTna_outlHigh <- rowSums(rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd), na.rm=T)
+            rtna[rtna<(sumss$RTna_mean-outlFac*sumss$RTna_sd)] <- NA
+            rtna[rtna>(sumss$RTna_mean+outlFac*sumss$RTna_sd)] <- NA
+            sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
+            sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
+            sumss$RTna_norm <- c(sumss$RTna_mean[1:nc]/mean(sumss$RTna_mean[1:nc],na.rm=T),0)
+            # Binding the summary statistics with the empty data frame
+            ds <- rbind(ds, sumss)
+            # Gathering RTs:
+            cbound <- cbind(sumss,rtna)
+            # Renaming the trial columns for easy handling later: 
+            trialColNames <- paste('t',as.character(c(1:nTrials)),sep='')
+            colnames(cbound)[(length(cbound)-nTrials+1):(length(cbound))] <- trialColNames
+            # Melting the data set to have a trial per row:
+            melted <- melt(cbound, id=c('SubjID', 'subjThresh', 'motPat', 'maskSpeed','targSpeed',
+                                        'mpRotMask', 'mpRotTarg', 'mpMatch'),
+                       measure.vars=trialColNames)
+            # Renaming the variables for trial and RT:
+            melted <- rename(melted,c('variable'='trial','value'='RT'))
+            if(curCond==1 & curSubj==1){
+                md <- melted
+            }else{
+                md <- rbind(md, melted)
+            }
+            print(paste('Processed file',subjDataFN))
+        }else{
+            print(paste('File does not exist:',subjDataFN))
+        }
+    }
+}
+ds$Condition <- as.factor(substr(ds$cond, 6, 9))
+ds <- ds[ds$targSpeed>0,]
+mdBlanks <- md[md$targSpeed==0,]
+md <- md[md$targSpeed!=0,] # deleting blank trials
+rownames(md)=NULL
+```
+
+# Quality control
+
+## Individual thresholds
+```{r, fig.height=3, fig.width=4}
+# Calculating the subject means for the four thresholds:
+subjList$subjThresh <- rowMeans(subjList[,4:7], na.rm=F)
+# Excluding subjects with missing runs:
+subjList <- subjList[!is.na(subjList$subjThresh),]
+# Rearranging based on the threshold value:
+subjList <- arrange(subjList,subjThresh)
+subjList$altSubj <- as.character(c(101:(100+nrow(subjList))))
+# Line plots for non-broken trials:
+p <- ggplot(subjList, aes(x=altSubj, y=subjThresh)) + geom_bar(stat='identity') + 
+    theme_bw() + labs(y='Contrast Threshold', x='Participant') + ylim(0,2) +
+    theme(legend.position='none', axis.text.x = element_blank(), panel.border = element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9))
+plot(p)
+if(out){tiff('expt1thresh.tiff', width=3.5, height=2.6, units='in', res=300)}
+if(out){plot(p)}
+if(out){dev.off()}
+if(out){pdf("expt1thresh.pdf", width=4, height=3)}
+if(out){plot(p)}
+if(out){dev.off()}
+summary(subjList$subjThresh)
+sd(subjList$subjThresh) # standard deviation
+sum(subjList$subjThresh<1) # subjects with thresholds less than 1
+sum(subjList$subjThresh>1) # subjects with thresholds greater than 1
+```
+# Visualizations
+
+## Line and Box plots
+
+### Normalized line plot
+```{r, fig.height=3, fig.width=5}
+# Creating a data set with summaries per condition
+ss <- ddply(ds, .(maskSpeed,Condition), summarise, `Mean Normalized ST`=mean(RTna_norm),
+            SE=sd(RTna_norm))
+ss$motPat[ss$Condition=='cscm'] <- 'Rotating Target\nRotating Mask'
+ss$motPat[ss$Condition=='dsdm'] <- 'Linear Target\nLinear Mask'
+ss$motPat[ss$Condition=='csdm'] <- 'Rotating Target\nLinear Mask'
+ss$motPat[ss$Condition=='dscm'] <- 'Linear Target\nRotating Mask'
+dodge <- position_dodge(width=.5)
+alpha <- .6
+p <- ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized ST`, colour=motPat, group=motPat,
+                    ymax = `Mean Normalized ST` + SE,  ymin = `Mean Normalized ST` - SE)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed)) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         colour='   Motion Pattern') + 
+    guides(colour=guide_legend(keyheight=.3, default.unit='inch')) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+if(!out){plot(p)}else{png('expt1lin.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+```
+
+### Raw box plot
+```{r, fig.height=3, fig.width=7}
+ggplot(ds, aes(x=factor(maskSpeed), y=RTna_mean, colour=motPat)) +  geom_boxplot() + 
+    labs(x='Mask Speed', colour='Motion Pattern', y='Mean RT') + theme_bw()
+```
+
+### Normalized box plot
+```{r, fig.height=3, fig.width=7}
+ggplot(ds, aes(x=factor(maskSpeed), y=RTna_norm, colour=motPat)) +  geom_boxplot() + 
+    labs(x='Mask Speed', colour='Motion Pattern', y='Normalized RT') + theme_bw()
+```
+
+## Smoothed on raw
+
+### Cubic effects
+```{r, fig.height=3, fig.width=7}
+ggplot(md, aes(x=maskSpeed, y=RT, colour=factor(motPat), group=factor(motPat))) +  
+    stat_smooth(method='lm', formula=y~ns(x,3), alpha=.1, aes(fill=factor(motPat)), 
+                show.legend=F) +
+    geom_point(data=ds, aes(x=maskSpeed, y=RTna_mean, colour=motPat), 
+               position=position_dodge(width=.5), size=1, alpha=.5) + # square is shape=7
+    labs(x='Mask Speed', y='RT', colour='Motion Pattern') + theme_bw()
+```
+
+## Smoothed on normalized
+
+### Preparing the normalized data set
+```{r}
+# Compiling a data set containing two normalized values
+# Normalizing by subject
+mds <- ddply(md, .(SubjID), summarise, subjMean=mean(RT, na.rm=T))
+mdn <- merge(md,mds,by='SubjID')
+# Normalizing by motion pattern
+mdc <- ddply(md, .(SubjID, motPat), summarise, condMean=mean(RT, na.rm=T))
+mdn <- merge(mdn,mdc,by=c('SubjID','motPat'))
+# Computing the normalized RTs
+mdn$subjNormRT <- mdn$RT / mdn$subjMean
+mdn$condNormRT <- mdn$RT/mdn$condMean
+head(mdn)
+```
+
+### Loess smoothing
+```{r, fig.height=4, fig.width=7}
+p <- ggplot(mdn, aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='loess', alpha=.15, aes(fill=motPat), show.legend=F, size=.6) + 
+    geom_point(data=ds, aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.6), size=.7, alpha=.35) + # square is shape=7
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='   Motion Pattern') + 
+    guides(colour = guide_legend(override.aes=list(size=1.5, alpha=.5),
+                                 keyheight=.3, default.unit='inch')) +
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw() +
+    #scale_y_continuous(breaks=seq(.7,1.3,.2)) + 
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+plot(p)
+if(out){tiff('expt1loess.tiff', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+```
+
+### Low/High Threshold Participants
+```{r, fig.height=4, fig.width=7}
+p <- ggplot(mdn[mdn$subjThresh<median(mdn$subjThresh),],
+            aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='loess', alpha=.15, aes(fill=motPat), show.legend=F, size=.6) + 
+    geom_point(data=ds[ds$subjThresh<median(mdn$subjThresh),], 
+               aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.6), size=.7, alpha=.35) + # square is shape=7
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='   Motion Pattern') + 
+    guides(colour = guide_legend(override.aes=list(size=1.5, alpha=.5),
+                                 keyheight=.3, default.unit='inch')) +
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw() +
+    #scale_y_continuous(breaks=seq(.7,1.3,.2)) + 
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'),
+          legend.position = 'none') + ylim(.7,1.4)
+plot(p)
+if(out){tiff('expt1lt.tiff', width=2.5, height=2, units='in', res=600); plot(p); dev.off()}
+p <- ggplot(mdn[mdn$subjThresh>median(mdn$subjThresh),],
+            aes(x=maskSpeed, y=subjNormRT, colour=motPat, group=motPat)) +  
+    stat_smooth(method='loess', alpha=.15, aes(fill=motPat), show.legend=F, size=.6) + 
+    geom_point(data=ds[ds$subjThresh>median(mdn$subjThresh),], 
+               aes(x=maskSpeed, y=RTna_norm, colour=motPat), 
+               position=position_dodge(width=.6), size=.7, alpha=.35) + # square is shape=7
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
+         y='Normalized RT', colour='   Motion Pattern') + 
+    guides(colour = guide_legend(override.aes=list(size=1.5, alpha=.5),
+                                 keyheight=.3, default.unit='inch')) +
+    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + theme_bw() +
+    #scale_y_continuous(breaks=seq(.7,1.3,.2)) + 
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent')) + ylim(.7,1.4)
+plot(p)
+if(out){tiff('expt1ht.tiff', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+```
+
+## Linear plots
+For this, we need a new data set that contains the summary values for normalized suppression times. First, we compute the averages of normalized RTs for every subject and condition. Then we take the average across subjects to derive a condition mean.
+```{r}
+mdns <- ddply(mdn, .(SubjID, subjThresh, motPat, maskSpeed), summarise,
+                meanSubjST = mean(subjNormRT, na.rm=T))
+mdnsum <- ddply(mdns, .(motPat, maskSpeed), summarise,
+                meanCondST = mean(meanSubjST), seCondST = sd(meanSubjST))
+mdnsum_lt <- ddply(mdns[mdns$subjThresh<median(mdns$subjThresh),], .(motPat, maskSpeed), summarise,
+                meanCondST = mean(meanSubjST), seCondST = sd(meanSubjST))
+mdnsum_ht <- ddply(mdns[mdns$subjThresh>median(mdns$subjThresh),], .(motPat, maskSpeed), summarise,
+                meanCondST = mean(meanSubjST), seCondST = sd(meanSubjST))
+```
+
+### All Ps
+```{r, fig.height=4, fig.width=7}
+dodge <- position_dodge(width=.5)
+alpha <- .6
+p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
+                    ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed)) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Mean Suppression Time',
+         colour='   Motion Pattern') + 
+    guides(colour=guide_legend(keyheight=.3, default.unit='inch')) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+if(!out){plot(p)}else{png('expt1lin2.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
+                    ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed)) + theme_black() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Mean Suppression Time',
+         colour='   Motion Pattern') +
+    guides(colour=guide_legend(keyheight=.4, default.unit='inch')) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          legend.key=element_blank(), legend.background=element_rect(fill='transparent'),
+          axis.title.y=element_text(margin=margin(0,5,0,0)),
+          axis.title.x=element_text(margin=margin(5,0,0,0)))
+if(out){png('expt1lin2_black.png', width=5, height=3, units='in', res=600); plot(p); dev.off()}
+```
+
+### Low- and High-Thresh Ps
+```{r, fig.height=4, fig.width=7}
+p <- ggplot(mdnsum_lt, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
+                    ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed)) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Mean Suppression Time',
+         colour='   Motion Pattern') + ylim(.6,1.6) +
+    guides(colour=guide_legend(keyheight=.3, default.unit='inch')) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'),
+          legend.position='none')
+if(!out){plot(p)}else{png('expt1lin2_lt.png', width=2.5, height=2, units='in', res=600); plot(p); dev.off()}
+p <- ggplot(mdnsum_ht, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
+                    ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed)) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Mean Suppression Time',
+         colour='   Motion Pattern') + ylim(.6,1.6) +
+    guides(colour=guide_legend(keyheight=.3, default.unit='inch')) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+if(!out){plot(p)}else{png('expt1lin2_ht.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+```
+
+# Linear models
+
+## Preparing the data set
+```{r}
+# Centering some variables:
+md$maskSpeed_ctr <- with(md, maskSpeed-targSpeed)
+md$subjThresh_ctr <- with(md, subjThresh-mean(subjThresh))
+md$mpMatch_ctr <- with(md, ((mpMatch*2) - 1) )
+md$mpRotMask_ctr <- with(md, ((mpRotMask*2) - 1) )
+md$mpRotTarg_ctr <- with(md, ((mpRotTarg*2) - 1) )
+
+# Preparing the data set:
+md$trialN <- substr(md$trial, 2, 3)
+md$trialN <- as.numeric(md$trialN)
+
+head(md)
+```
+
+<!--
+## Potentially helpful functions
+```{r}
+# r2.corr.mer <- function(m) {
+#   lmfit <-  lm(model.response(model.frame(m)) ~ fitted(m))
+#   summary(lmfit)$r.squared
+# }
+# e.g.,
+# r2.corr.mer(m2_int)
+
+# # Tukey
+# Tukey_aov <- aov(RT~maskSpeed+motPat, data=md)
+# TukeyHSD(Tukey_aov, 'motPat', ordered=T)
+```
+
+<!-- 
+## The importance of centering the variables:
+```{r}
+md_temp <- md
+m_temp1 <- lmer(RT~mpMatch*maskSpeed_ctr+(1|SubjID), md)
+# mpMatch=[0,1]
+pvalfn(m_temp1)
+md_temp$mpMatch <- md$mpMatch - .5
+m_temp2 <- lmer(RT~mpMatch*maskSpeed_ctr+(1|SubjID), md_temp)
+# mpMatch=[-.5,.5]
+pvalfn(m_temp2)
+md_temp$mpMatch <- (md$mpMatch * 2) - 1
+m_temp3 <- lmer(RT~mpMatch*maskSpeed_ctr+(1|SubjID), md_temp)
+# mpMatch=[-1,1]
+pvalfn(m_temp3)
+# Introducing a centered variable:
+m_temp6 <- lmer(RT~maskSpeed_ctr+(1|SubjID), md_temp)
+pvalfn(m_temp6)
+m_temp7 <- lmer(RT~maskSpeed_ctr+mpMatch+(1|SubjID), md_temp)
+pvalfn(m_temp7)
+m_temp8 <- lmer(RT~maskSpeed_ctr*mpMatch+(1|SubjID), md_temp)
+pvalfn(m_temp8)
+# Introducing a non-centered variable.
+m_temp9 <- lmer(RT~maskSpeed_ctr+(1|SubjID), md)
+pvalfn(m_temp9)
+m_temp10 <- lmer(RT~maskSpeed_ctr+mpMatch+(1|SubjID), md)
+pvalfn(m_temp10)
+m_temp11 <- lmer(RT~maskSpeed_ctr*mpMatch+(1|SubjID), md)
+pvalfn(m_temp11)
+```
+-->
+
+## Mask/target congruence
+```{r}
+m_mpMatch_full <- lmer(RT~trialN+mpMatch_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_mpMatch_full)
+# write.table(pvalfn(m_mpMatch_full),'clipboard',sep='\t',row.names=T)
+```
+
+## Target/mask types
+```{r}
+m_mpType_full <- lmer(RT~trialN+subjThresh_ctr*mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+
+                              (1|SubjID), md)
+(pvalfn(m_mpType_full))
+# write.table(pvalfn(m_mpType_full),'clipboard',sep='\t',row.names=T)
+```
+
+## Analysis of non-responses
+ 
+```{r}
+# Constructing a new data set with na response count:
+dsna <- ddply(md, .(SubjID, subjThresh_ctr, maskSpeed_ctr, mpRotMask_ctr, mpRotTarg_ctr, 
+                    mpMatch_ctr), summarise, nNa=sum(is.na(RT)))
+head(dsna)
+
+# Characterising the new data set
+dsna_sum <- ddply(dsna, .(SubjID, subjThresh_ctr), summarise, meanNa=mean(nNa), sdNa=sd(nNa),
+                  countNa=sum(nNa))
+dsna_sum
+
+# Targ/mask congruence
+m_na_mpMatch <- lmer(nNa ~ mpMatch_ctr * maskSpeed_ctr * subjThresh_ctr + (1|SubjID), dsna)
+pvalfn(m_na_mpMatch)
+
+# Target/mask types
+m_na_mpType <- lmer(nNa ~ mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr * subjThresh_ctr + 
+                        (1|SubjID), dsna)
+pvalfn(m_na_mpType)
+```
+
+## Non-linear analyses
+
+```{r}
+mdSum <- ddply(md, c('maskSpeed_ctr'), summarise, meanRT = mean(RT, na.rm=T))
+head(mdSum)
+fitLin <- lm(meanRT~maskSpeed_ctr, data=mdSum)
+fitSquare <- nls(meanRT~a+b*maskSpeed_ctr^2, data=mdSum, start=list(a=1,b=0))
+summary(fitSquare)
+anova(fitLin, fitSquare)
+# fitCube <- nls(meanRT~a+b*maskSpeed_ctr^3, data=mdSum, start=list(a=1,b=0))
+# summary(fitCube)
+# anova(fitSquare, fitCube)
+# fitQuat <- nls(RT~a+b*maskSpeed_ctr^4, data=md, start=list(a=1,b=0))
+# summary(fitQuat)
+# anova(fitCube, fitQuat)
+```

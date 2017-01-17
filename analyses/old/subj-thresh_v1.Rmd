@@ -1,0 +1,74 @@
+---
+title: "Effect of dynamic mask speed on suppression of a moving stimulus: Two target speeds"
+author: "Egor Ananyev"
+date: '2016-04-28'
+output:
+    html_document:
+        toc: true
+---
+
+<style type="text/css">
+body, td{
+  font-family: Cambria;
+}
+code.r{
+  font-family: Inconsolata;
+}
+</style>
+
+# Preparing the data
+
+```{r set-options, message=F, warning=F}
+options(width=108)
+out=F
+# The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
+library(xlsx)
+library(ggplot2)
+library(plyr)
+library(matrixStats)
+library(splines)
+library(lme4)
+library(lmerTest)
+library(reshape)
+# Neat functions:
+source('/Users/Egor/Dropbox/Prog/R/myFunctions/blackTheme.R')
+source('/Users/Egor/Dropbox/Prog/R/myFunctions/pvalfn.R')
+# Read in the Excel worksheet:
+dataDir <- '/Users/Egor/Dropbox/Projects/supr-eff/old/data_prechange/data-transl-01/'
+ds <- read.csv(paste(dataDir,'groupThresholds.csv',sep=''), header=T)
+ds$subj<- as.factor(ds$subj)
+```
+
+# Linear analyses
+
+## Centering the data
+```{r}
+# Centering some variables:
+ds$maskSpeed_ctr <- with(ds, maskSpeed-3)
+head(ds)
+```
+
+## Full linear model
+```{r}
+m_full <- lmer(threshold~maskSpeed_ctr+(1|subj),ds)
+pvalfn(m_full)
+# write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
+```
+
+## Non-linear model
+```{r, fig.height=3, fig.width=7}
+dsSum <- ddply(ds, c('maskSpeed'), summarise, meanThresh = mean(threshold))
+fitLin <- lm(meanThresh~maskSpeed, data=dsSum)
+fitSquare <- nls(meanThresh~a+b*maskSpeed^2, data=dsSum, start=list(a=.1,b=0))
+ggplot(ds, aes(x = maskSpeed, y = as.numeric(coef(fitSquare)[1]) + 
+                   as.numeric(coef(fitSquare)[2]) * maskSpeed^2)) + 
+    geom_point() + geom_line()
+summary(fitSquare)
+anova(fitLin, fitSquare)
+# fitCube <- nls(meanThresh~a+b*maskSpeed^3, data=dsSum, start=list(a=.1,b=0))
+# summary(fitCube)
+# anova(fitSquare, fitCube)
+# fitQuat <- nls(meanThresh~a+b*maskSpeed^4, data=dsSum, start=list(a=.1,b=0))
+# summary(fitQuat)
+# anova(fitCube, fitQuat)
+```
