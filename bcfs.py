@@ -29,7 +29,7 @@ os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'session': u's', u'domEye': u'r', u'participant': u'', u'thresh': u'',
+expInfo = {u'session': u's1', u'domEye': u'r', u'participant': u'', u'thresh': u'',
            u'training': u'0'}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
@@ -58,7 +58,7 @@ windowThickness = 2
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
 # Mask variables:
-nMaskElements = 248 # 300 must be divisible by the number of directions allowed (below)
+nMaskElements = 320 # 248 # must be divisible by the number of directions allowed (below)
 # Timing variables (in seconds) and trial number:
 # jitTime = .5 # the jittering for the onset; the max for preStimInterval 
 # stimDuration = 3 # 3.6s in the Moors paper
@@ -68,7 +68,8 @@ ISIduration = 0.0 # 0.5 before
 contrMin = 0
 contrMax = 2
 # Condition-related variables
-conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-4-2'+'.csv'
+exptCond = 5
+conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-'+str(exptCond)+'.csv'
 if expInfo['training']=='1':
     train = True
 else:
@@ -96,7 +97,8 @@ win = visual.Window(size=(1680, 1050), fullscr=False, screen=1, allowGUI=False,
     allowStencil=False, monitor='testMonitor', color='black', colorSpace='rgb', 
     blendMode='avg', useFBO=True, units='deg')
 # store frame rate of monitor if we can measure it successfully
-frameRate=win.getActualFrameRate()
+#frameRate=win.getActualFrameRate()
+frameRate=60
 if frameRate!=None:
     frameDur = 1.0/round(frameRate)
 else:
@@ -383,6 +385,10 @@ for thisTrial in trials:
     mask.sizes = [thisMaskSize, thisMaskSize] # mask size
     # Maximum travel distance from the centre - i.e., 'effective' radius:
     maxTravDist = (windowSize - thisTargSize) / 2
+    if exptCond == 5: # controling for travel distance in 5th condition
+        targMaxTravDist = maxTravDist*.5*thisTrial['targSpeed']/5
+    else:
+        targMaxTravDist = maxTravDist*.5
     # Resetting the starting positions of mask elements - 
     #  (assuming that the mask is different for every trial):
     if thisMaskContin:
@@ -574,20 +580,19 @@ for thisTrial in trials:
                 target.pos = [targPosX, targPosY]
             else:
                 if edgeReached: # if the edge is reached, reappear on the other end
-                    travDist = tMove*thisTargSpeed-(maxTravDist*.5)
+                    travDist = tMove*thisTargSpeed-targMaxTravDist
                 else: # otherwise, start from the initial target position:
                     # note that this is only for the first cycle!
                     travDist = tMove*thisTargSpeed+thisTargInitPos
                 # if the target has already moved beyond max allowed travel dist
-                if travDist > (maxTravDist*.5):
+                if travDist > targMaxTravDist:
                     edgeReached = True
                     moveClock.reset() # reset the movement clock (set it to zero)
                     tMove = moveClock.getTime() # get the time
                     # use that reset time for new travDist, but start from the edge
-                    travDist = tMove*thisTargSpeed-(maxTravDist*.5)
+                    travDist = tMove*thisTargSpeed-targMaxTravDist
                 # target movement:
-                target.pos = [targOffsetX+thisTargDir*travDist, \
-                    targOffsetY]
+                target.pos = [targOffsetX+thisTargDir*travDist,targOffsetY]
         if target.status == STARTED and t >= stimOffset:
             target.setAutoDraw(False)
         
