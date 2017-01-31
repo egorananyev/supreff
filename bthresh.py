@@ -28,7 +28,7 @@ os.chdir(_thisDir)
 
 # Store info about the experiment session
 expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'paradigm': u't-cscm01b', u'domEye': u'r', u'participant': u'', u'training': u'1'}
+expInfo = {u'paradigm': u't-dscm01b', u'domEye': u'r', u'participant': u'', u'training': u'1'}
 dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
 # expInfo['date'] = data.getDateStr()  # add a simple timestamp

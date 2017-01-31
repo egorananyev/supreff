@@ -297,13 +297,50 @@ ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=factor(targSpeed),
     geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
 ```
 
+## Normalized plots for high- and low-thresh subjects
+
+### High-threshold subjects
+```{r, fig.height=3, fig.width=5}
+ss = ddply(dsTh, .(maskSpeed,targSpeed), summarise, `Mean Normalized RT`=mean(RTna_norm))
+#ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=targSpeed, group=targSpeed)) +  
+#    geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
+```
+
+### Low-threshold subjects
+```{r, fig.height=3, fig.width=5}
+ss = ddply(dsTl, .(maskSpeed,targSpeed), summarise, `Mean Normalized RT`=mean(RTna_norm))
+#ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=targSpeed, group=targSpeed)) +  
+#    geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
+```
+
 ## Smoothed on raw
+
+### Cubic effects
+```{r, fig.height=3, fig.width=5}
+ggplot(md, aes(x=maskSpeed, y=RT, colour=factor(targSpeed), group=factor(targSpeed))) +  
+    stat_smooth(method='lm', formula=y~ns(x,3)) + 
+    labs(x='Mask Speed', y='RT',colour='Target Speed') + theme_bw()
+```
+
+### Quartic effects
+```{r, fig.height=3, fig.width=5}
+ggplot(md, aes(x=maskSpeed, y=RT, colour=factor(targSpeed), group=factor(targSpeed))) +  
+    stat_smooth(method='lm', formula=y~ns(x,4)) + 
+    labs(x='Mask Speed', y='RT',colour='Target Speed') + theme_bw()
+```
 
 ### Quartic effects with low-threshold participants
 ```{r, fig.height=3, fig.width=5}
 ssTl <- md[md$SubjID %in% subjTl,]
 ssTh <- md[md$SubjID %in% subjTh,]
 #ggplot(ssTl, aes(x=maskSpeed, y=RT, colour=factor(targSpeed), group=factor(targSpeed))) +  
+#    stat_smooth(method='lm', formula=y~ns(x,4)) + 
+#    labs(x='Mask Speed', y='RT',colour='Target Speed') + theme_bw()
+```
+
+### Quartic effects with low-threshold participants
+```{r, fig.height=3, fig.width=5}
+#ggplot(ssTh, aes(x=maskSpeed, y=RT, colour=factor(targSpeed), group=factor(targSpeed))) +  
 #    stat_smooth(method='lm', formula=y~ns(x,4)) + 
 #    labs(x='Mask Speed', y='RT',colour='Target Speed') + theme_bw()
 ```
@@ -373,6 +410,38 @@ p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=factor(targSpeed),
           legend.key = element_blank(), #legend.margin=unit(-.04, 'in'),
           legend.background = element_rect(fill='transparent'))
 if(!out){plot(p)}else{png('expt2lin.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+```
+
+## Predicted pattern
+```{r, fig.height=4, fig.width=7}
+expData <- mdnsum
+expData$seCondST <- 0.03
+expData$meanCondST <- c(1.05,1.1,1.05,.95,.9,.85,
+                        .85,.9,.95,.97,1,.95)
+#expData$meanCondST <- expData$meanCondST + .075
+#expData$meanCondST <- expData$meanCondST + runif(10,.01,.03)
+#expData$meanCondST <- expData$meanCondST + c(0,0,.3,.3,.1,.1,-.1,-.1,-.1,-.1,-.1,-.1)
+p <- ggplot(expData, aes(x=maskSpeed, y=meanCondST, colour=factor(targSpeed), 
+                        group=factor(targSpeed), 
+                        ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed),
+                       labels=as.character(unique(ss$maskSpeed))) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Normalized Suppression Time',
+         colour=' Target\n Speed') + 
+    guides(colour=guide_legend(keyheight=.2, default.unit='inch')) +
+    scale_colour_manual(breaks=c(1,5), labels=c(
+            expression(paste('1', degree, '/s', sep='')),
+            expression(paste('5', degree, '/s', sep=''))),
+        values=c('#E69F00', '#0072B2')) + theme_bw() + ylim(.8,1.2) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), #legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+if(!out){plot(p)}else{png('expt2linPred.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
 # Linear models
