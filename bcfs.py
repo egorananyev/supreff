@@ -68,7 +68,7 @@ ISIduration = 0.0 # 0.5 before
 contrMin = 0
 contrMax = 2
 # Condition-related variables
-exptCond = 5
+exptCond = 6
 conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-'+str(exptCond)+'.csv'
 if expInfo['training']=='1':
     train = True
@@ -389,6 +389,8 @@ for thisTrial in trials:
         targMaxTravDist = maxTravDist*.5*thisTrial['targSpeed']/5
     else:
         targMaxTravDist = maxTravDist*.5
+    if exptCond == 6: # controling for travel distance of mask elements:
+        maskPathMulti
     # Resetting the starting positions of mask elements - 
     #  (assuming that the mask is different for every trial):
     if thisMaskContin:

@@ -338,7 +338,7 @@ p <- ggplot(subjMeans, aes(x=maskSpeed, y=subjMean, colour=factor(targSpeed))) +
     scale_colour_manual(breaks=c(1,5), labels=c(
             expression(paste('1', degree, '/s', sep='')),
             expression(paste('5', degree, '/s', sep=''))),
-        values=c('#E69F00', '#0072B2')) + theme_bw() + ylim(.7,1.4) +
+        values=c('#E69F00', '#0072B2')) + theme_bw() + #ylim(.7,1.4) +
     theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
           axis.text=element_text(size=8), axis.title=element_text(size=9),
           legend.text=element_text(size=8), legend.title=element_text(size=9),
@@ -366,7 +366,7 @@ p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=factor(targSpeed),
     scale_colour_manual(breaks=c(1,5), labels=c(
             expression(paste('1', degree, '/s', sep='')),
             expression(paste('5', degree, '/s', sep=''))),
-        values=c('#E69F00', '#0072B2')) + theme_bw() + ylim(.8,1.2) +
+        values=c('#E69F00', '#0072B2')) + theme_bw() + #ylim(.8,1.2) +
     theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
           axis.text=element_text(size=8), axis.title=element_text(size=9),
           legend.text=element_text(size=8), legend.title=element_text(size=9),
@@ -393,9 +393,9 @@ head(md)
 
 ## Full linear model
 ```{r}
-#m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
-#pvalfn(m_full)
-# write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
+m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
 ```
 
 ## Detecting slope differences at different points of the graph
