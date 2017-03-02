@@ -27,18 +27,19 @@ _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 
 # Store info about the experiment session
-expName = 'dm'  # from the Builder filename that created this script
-expInfo = {u'paradigm': u't-dscm01b', u'domEye': u'r', u'participant': u'', u'training': u'1'}
-dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
+exptName = 'dm'  # from the Builder filename that created this script
+exptCond = 6
+expInfo = {u'paradigm': u'6-train-test', u'domEye': u'r', u'participant': u'', u'training': u'1'}
+dlg = gui.DlgFromDict(dictionary=expInfo, title=exptName) # dialogue box
 if dlg.OK == False: core.quit()  # user pressed cancel
 # expInfo['date'] = data.getDateStr()  # add a simple timestamp
 timeNow = datetime.now()
 expInfo['date'] = datetime.now().strftime('%Y-%m-%d_%H%M')
-expInfo['expName'] = expName
+expInfo['exptName'] = exptName
 
 # Data file name stem = absolute path + name; later add .psyexp, .csv, .log, etc
 dataDir = '..' + os.sep + 'data'
-fileName = 'bthresh_%s_%s_t%s_%s_dom-%s_%s' %(expName, 
+fileName = 'bthresh_%s_%s_t%s_%s_dom-%s_%s' %(exptName, 
     expInfo['paradigm'], expInfo['training'], expInfo['participant'], 
     expInfo['domEye'], expInfo['date'])
 filePath = dataDir + os.sep + fileName
@@ -77,7 +78,7 @@ print conditionsFilePath
 # ====================================================================================
 
 # An ExperimentHandler isn't essential but helps with data saving
-thisExp = data.ExperimentHandler(name=expName, version='', extraInfo=expInfo, 
+thisExp = data.ExperimentHandler(name=exptName, version='', extraInfo=expInfo, 
     runtimeInfo=None, originPath=None, savePickle=True, saveWideText=True, 
     dataFileName=filePath)
 
@@ -359,7 +360,8 @@ while len(stairs)>0:
         print 'targ maximum duration: ' + str(targMaxDur)
         fadeInNofFrames = round(frameRate*targMaxDur)
         # Variables set to random values:
-        thisTargDir = np.random.choice([-1,1])
+        thisInitTargDir = np.random.choice([-1,1]) # initial direction
+        thisTargDir = thisInitTargDir # this will change throughout the trial for cond 6
         thisTargLoc = np.random.choice([thisStair.extraInfo['targLoc1'], \
             thisStair.extraInfo['targLoc2']])
         thisTargInitPos = np.random.choice([thisStair.extraInfo['targInitPos1'],\
@@ -396,7 +398,7 @@ while len(stairs)>0:
             %(thisStair.extraInfo['startVal'], thisIntensity)
         # print 'thisTargLoc: ' + str(thisTargLoc)
         # print 'thisMaskSpeed: ' + str(thisMaskSpeed)
-        # print 'thisTargDir: ' + str(thisTargDir)
+        # print 'thisInitTargDir: ' + str(thisInitTargDir)
         #print 'thisCondition: ' + str(thisCondition)
         # Setting up the colour, shape, and size specifications:
         target.setFillColor(thisTargColour)
@@ -568,6 +570,15 @@ while len(stairs)>0:
                 target.frameNStart = frameN  # exact frame index
                 target.setAutoDraw(True)
                 edgeReached = False # this is only true for the first cycle
+                begTravAngle = 2*np.pi*(thisTargInitPos) # travAngle at the onset
+                endTravAngle = 2*np.pi*(thisTargInitPos+thisTargDir*(3/5)*\
+                        thisTargSpeed/360) # travAngle to reverse 5 times per 3 seconds
+                extrAngles = [begTravAngle, endTravAngle]
+                curRefAngle = thisTargInitPos
+                nDirRevs = 1
+                print thisTargInitPos
+                print thisTargDir
+                print thisTargSpeed/360
                 moveClock.reset()
             if target.status == STARTED:
                 curFrameN = frameN - target.frameNStart
@@ -584,12 +595,36 @@ while len(stairs)>0:
                 # Clocking the time spent moving:
                 tMove = moveClock.getTime()
                 if thisTargContin:
-                    targPosX=thisTargLoc*np.cos(2*np.pi*(thisTargInitPos+\
-                             thisTargDir*(t-target.tStart)*\
-                             thisTargSpeed/360))+targOffsetX
-                    targPosY=thisTargLoc*np.sin(2*np.pi*(thisTargInitPos+\
-                             thisTargDir*(t-target.tStart)*thisTargSpeed/360))+\
-                             windowOffsetY
+                    #print tMove
+                    #print np.rint(tMove+.5)%2
+                    # ping-pong target - reverses every second
+                    #if exptCond == 6 and not np.rint(tMove+.5)%2: 
+                    travAngle = 2*np.pi*(curRefAngle+thisTargDir*tMove*\
+                            thisTargSpeed/360)
+                    if exptCond == 6:
+                        # if the travel angle range is exceeded:
+                        if edgeReached and travAngle < max(extrAngles) and \
+                                    travAngle > min(extrAngles):
+                            edgeReached = False
+                        if not edgeReached and (travAngle >= max(extrAngles) or \
+                                    travAngle <= min(extrAngles)):
+                            edgeReached = True
+                            nDirRevs += 1 # counting dir reversals
+                            # change target's ref point every other dir reversal:
+                            if nDirRevs%2: 
+                                curRefAngle = thisTargInitPos
+                            else:
+                                curRefAngle = (travAngle)\
+                                              /(2*np.pi)
+                            print 'curRefAngle = ' + str(curRefAngle)
+                            # change the target direction:
+                            thisTargDir = -thisTargDir # for the next frame
+                            moveClock.reset() # reset the movement clock (set it to zero)
+                            tMove = moveClock.getTime() # get the time
+                    print str(min(extrAngles)) + ' ' + str(max(extrAngles)) + ' ' + \
+                          str(travAngle)
+                    targPosX=thisTargLoc*np.cos(travAngle)+targOffsetX
+                    targPosY=thisTargLoc*np.sin(travAngle)+windowOffsetY
                     target.pos = [targPosX, targPosY]
                 else:
                     if edgeReached: # if the edge is reached, reappear on the other end
@@ -662,7 +697,7 @@ while len(stairs)>0:
             # if the response is recorded, terminate the trial
             if respRecorded:
                 # update staircase with the random variable combination:
-                thisStair.addOtherData('thisTargDir', thisTargDir)
+                thisStair.addOtherData('thisInitTargDir', thisInitTargDir)
                 thisStair.addOtherData('thisTargLoc', thisTargLoc)
                 thisStair.addOtherData('thisTargInitPos', thisTargInitPos)
                 print 'reversal intensities for stair %s:' \
