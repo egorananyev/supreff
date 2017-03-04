@@ -364,8 +364,7 @@ while len(stairs)>0:
         thisTargDir = thisInitTargDir # this will change throughout the trial for cond 6
         thisTargLoc = np.random.choice([thisStair.extraInfo['targLoc1'], \
             thisStair.extraInfo['targLoc2']])
-        thisTargInitPos = np.random.choice([thisStair.extraInfo['targInitPos1'],\
-            thisStair.extraInfo['targInitPos2'],thisStair.extraInfo['targInitPos3']])
+        thisTargInitPos = np.random.choice([0,.25,.5,.75])
         # print 'thisTargInitPos: ' + str(thisTargInitPos)
         thisTargVertices = thisStair.extraInfo['targVertices']
         thisMaskVertices = thisStair.extraInfo['maskVertices']
@@ -532,16 +531,18 @@ while len(stairs)>0:
                 mask.setAutoDraw(True)
                 maskMoveClock.reset()
             if mask.status == STARTED and t > preStimInterval and t < stimOffset:
-                if thisMaskContin:
-                    maskCurPosX = maskInitPosX + \
-                        np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
-                        maskSpeedMult/360
-                    maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
-                    maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*\
-                        (maskInitPosX+np.array([maskDirs]).T*(t-mask.tStart)*\
-                        thisMaskSpeed*maskSpeedMult/360))
-                    mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
-                    mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
+                if thisMaskContin :
+                    if not exptCond==6:
+                        maskCurPosX = maskInitPosX + \
+                            np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
+                            maskSpeedMult/360
+                        maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
+                        maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*\
+                            (maskInitPosX+np.array([maskDirs]).T*(t-mask.tStart)*\
+                            thisMaskSpeed*maskSpeedMult/360))
+                        mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
+                        mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
+                    else: 
                 else: # discontinuous mask
                     if tMaskMove == 0:
                         tMaskMove = frameDur # maskMoveClock.getTime()
@@ -595,31 +596,25 @@ while len(stairs)>0:
                 # Clocking the time spent moving:
                 tMove = moveClock.getTime()
                 if thisTargContin:
-                    #print tMove
-                    #print np.rint(tMove+.5)%2
-                    # ping-pong target - reverses every second
-                    #if exptCond == 6 and not np.rint(tMove+.5)%2: 
                     travAngle = 2*np.pi*(curRefAngle+thisTargDir*tMove*\
                             thisTargSpeed/360)
                     if exptCond == 6:
                         # if the travel angle range is exceeded:
-                        if edgeReached and travAngle < max(extrAngles) and \
-                                    travAngle > min(extrAngles):
-                            edgeReached = False
                         if not edgeReached and (travAngle >= max(extrAngles) or \
                                     travAngle <= min(extrAngles)):
                             edgeReached = True
                             nDirRevs += 1 # counting dir reversals
                             # change target's ref point every other dir reversal:
-                            if nDirRevs%2: 
-                                curRefAngle = thisTargInitPos
-                            else:
-                                curRefAngle = (travAngle)\
-                                              /(2*np.pi)
-                            print 'curRefAngle = ' + str(curRefAngle)
+                            if nDirRevs%2: curRefAngle = thisTargInitPos
+                            else: curRefAngle = travAngle/2*np.pi
+                            #print 'curRefAngle = ' + str(curRefAngle)
                             # change the target direction:
                             thisTargDir = -thisTargDir # for the next frame
                             moveClock.reset() # reset the movement clock (set it to zero)
+                        # if the target appears within its bounds again:
+                        if edgeReached and travAngle < max(extrAngles) and \
+                                    travAngle > min(extrAngles):
+                            edgeReached = False
                             tMove = moveClock.getTime() # get the time
                     print str(min(extrAngles)) + ' ' + str(max(extrAngles)) + ' ' + \
                           str(travAngle)

@@ -328,8 +328,7 @@ for thisTrial in trials:
     thisTargLoc = np.random.choice([thisTrial['targLoc1'], \
         thisTrial['targLoc2']])
     trials.data.add('thisTargLoc', thisTargLoc)
-    thisTargInitPos = np.random.choice([thisTrial['targInitPos1'],\
-        thisTrial['targInitPos2'],thisTrial['targInitPos3']])
+    thisTargInitPos = np.random.choice([0,.25,.5,.75])
     trials.data.add('thisTargInitPos', thisTargInitPos)
     # print 'thisTargInitPos: ' + str(thisTargInitPos)
     thisTargVertices = thisTrial['targVertices']
