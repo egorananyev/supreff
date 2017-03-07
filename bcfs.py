@@ -28,10 +28,11 @@ _thisDir = os.path.dirname(os.path.abspath(__file__))
 os.chdir(_thisDir)
 
 # Store info about the experiment session
-expName = 'dm'  # from the Builder filename that created this script
 expInfo = {u'session': u's1', u'domEye': u'r', u'participant': u'', u'thresh': u'',
-           u'training': u'0'}
-dlg = gui.DlgFromDict(dictionary=expInfo, title=expName) # dialogue box
+           u'training': u'0', u'exptCond': ''}
+dlg = gui.DlgFromDict(dictionary=expInfo, title='dm') # dialogue box
+expName = 'dm' + expInfo['exptCond']
+exptCond = int(expInfo['exptCond'])
 if dlg.OK == False: core.quit()  # user pressed cancel
 # expInfo['date'] = data.getDateStr()  # add a simple timestamp
 timeNow = datetime.now()
@@ -69,7 +70,7 @@ ISIduration = 0.0 # 0.5 before
 contrMin = 0
 contrMax = 2
 # Condition-related variables
-exptCond = 7
+#exptCond = 6
 conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-'+str(exptCond)+'.csv'
 if expInfo['training']=='1':
     train = True
