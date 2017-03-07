@@ -58,8 +58,9 @@ windowThickness = 2
 blackBoxSize = windowSize + 0.5
 blackBoxThickness = 10
 # Mask variables:
-nMaskElements = 320 # 248 # must be divisible by the number of directions allowed (below)
+nMaskElements = 300 # 248 # must be divisible by the number of directions allowed (below)
 # Timing variables (in seconds) and trial number:
+tRev = 3/5 # the duration of each direction reversal, in sec, kept constant for all targ & mask v's
 # jitTime = .5 # the jittering for the onset; the max for preStimInterval 
 # stimDuration = 3 # 3.6s in the Moors paper
 # threshTime = 2 # the threshold time will appear at 2s
@@ -68,7 +69,7 @@ ISIduration = 0.0 # 0.5 before
 contrMin = 0
 contrMax = 2
 # Condition-related variables
-exptCond = 6
+exptCond = 7
 conditionsFilePath = 'cond-files'+os.sep+'cond-bcfs-'+str(exptCond)+'.csv'
 if expInfo['training']=='1':
     train = True
@@ -367,6 +368,8 @@ for thisTrial in trials:
     thisMaskColGrey = thisTrial['maskColGrey']
     targMaxDur = thisTrial['targMaxDur']
     targThreshT = thisTrial['targThreshT']
+    targDirSwitch = thisTrial['targDirSwitch']
+    maskDirSwitch = thisTrial['maskDirSwitch']
     # What changes from trial to trial (will be different for dif expts)?
     # print 'thisTargLoc: ' + str(thisTargLoc)
     print 'thisMaskSpeed: ' + str(thisMaskSpeed)
@@ -388,8 +391,6 @@ for thisTrial in trials:
         targMaxTravDist = maxTravDist*.5*thisTrial['targSpeed']/5
     else:
         targMaxTravDist = maxTravDist*.5
-    if exptCond == 6: # controling for travel distance of mask elements:
-        maskPathMulti
     # Resetting the starting positions of mask elements - 
     #  (assuming that the mask is different for every trial):
     if thisMaskContin:
@@ -519,17 +520,31 @@ for thisTrial in trials:
             mask.fieldPos = [maskOffsetX, windowOffsetY]
             mask.setAutoDraw(True)
             maskMoveClock.reset()
+            maskTrajLength = 2*np.pi*tRev*thisMaskSpeed*maskSpeedMult/360 # trajLen is diff for diff r
+            maskCjit = np.random.rand(nMaskElements) # jittered location along c
         if mask.status == STARTED and t > preStimInterval and t < stimOffset:
             if thisMaskContin:
-                maskCurPosX = maskInitPosX + \
-                    np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
-                    maskSpeedMult/360
-                maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
-                maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*\
-                    (maskInitPosX+np.array([maskDirs]).T*(t-mask.tStart)*\
-                    thisMaskSpeed*maskSpeedMult/360))
-                mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
-                mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
+                if maskDirSwitch:
+                    # tc%2 # cycles travelled in this odd-even cycle:
+                    tc = (t - mask.tStart) / tRev
+                    # jittered location along c:
+                    c = np.remainder(np.array([maskCjit+np.repeat(tc,nMaskElements)]).T,2)
+                    maskTravAngles = 2*np.pi * maskInitPosX + np.array([maskDirs]).T * maskTrajLength * \
+                                (np.floor(c) + np.ceil(c)%2*c - np.floor(c) * c%1)
+                    maskPosX=maskInitPosY*np.cos(maskTravAngles)*maxTravDist
+                    maskPosY=maskInitPosY*np.sin(maskTravAngles)*maxTravDist
+                    mask.xys = np.concatenate((maskPosX, maskPosY), axis=1)
+                    mask.oris = np.reshape(-maskTravAngles.T*360/(2*np.pi), nMaskElements)
+                else:
+                    maskCurPosX = maskInitPosX + \
+                        np.array([maskDirs]).T*(t-mask.tStart)*thisMaskSpeed*\
+                        maskSpeedMult/360
+                    maskMovePosX = maxTravDist*maskInitPosY*np.cos(2*np.pi*maskCurPosX)
+                    maskMovePosY = maxTravDist*maskInitPosY*np.sin(2*np.pi*\
+                        (maskInitPosX+np.array([maskDirs]).T*(t-mask.tStart)*\
+                        thisMaskSpeed*maskSpeedMult/360))
+                    mask.xys = np.concatenate((maskMovePosX, maskMovePosY), axis=1)
+                    mask.oris = np.reshape(-maskCurPosX.T * 360, nMaskElements)
             else: # discontinuous mask
                 if tMaskMove == 0:
                     tMaskMove = frameDur # maskMoveClock.getTime()
@@ -557,8 +572,12 @@ for thisTrial in trials:
             target.tStart = t  # underestimates by a little under one frame
             target.frameNStart = frameN  # exact frame index
             target.setAutoDraw(True)
-            edgeReached = False # this is only true for the first cycle
-            moveClock.reset()
+            trajLength = 2*np.pi*tRev*thisTargSpeed/360
+            # print trajLength
+            if not exptCond == 6:
+                edgeReached = False # this is only true for the first cycle
+                curRefAngle = thisTargInitPos
+                moveClock.reset()
         if target.status == STARTED and t<stimOffset:
             curFrameN = frameN - target.frameNStart
             # Target opacity
@@ -574,10 +593,19 @@ for thisTrial in trials:
             # Clocking the time spent moving:
             tMove = moveClock.getTime()
             if thisTargContin:
-                targPosX=thisTargLoc*np.cos(2*np.pi*(thisTargInitPos+\
-                    thisTargDir*(t-target.tStart)*thisTargSpeed/360))+targOffsetX
-                targPosY=thisTargLoc*np.sin(2*np.pi*(thisTargInitPos+\
-                    thisTargDir*(t-target.tStart)*thisTargSpeed/360))+windowOffsetY
+                if targDirSwitch:
+                    #tc = (t - target.tStart) / tRev # total cycles travelled
+                    c =  ((t - target.tStart) / tRev)%2 # tc%2 # cycles travelled in this odd-even cycle
+                    #oc = np.floor(c) + np.ceil(c)%2*c # odd cycle
+                    #ec = np.floor(c) * c%1 # even cycle in reverse direction
+                    travAngle = 2*np.pi * thisTargInitPos + thisTargDir * trajLength * \
+                                (np.floor(c) + np.ceil(c)%2*c - np.floor(c) * c%1) #(oc - ec) * 
+                    #print 'tc='+str(tc)+'; c='+str(c)+'; oc='+str(oc)+'; ec='+str(ec)+'; a='+str(travAngle)
+                else:
+                    travAngle = 2*np.pi*(curRefAngle+thisTargDir*tMove*\
+                            thisTargSpeed/360)
+                targPosX=thisTargLoc*np.cos(travAngle)+targOffsetX
+                targPosY=thisTargLoc*np.sin(travAngle)+windowOffsetY
                 target.pos = [targPosX, targPosY]
             else:
                 if edgeReached: # if the edge is reached, reappear on the other end
