@@ -1,0 +1,218 @@
+---
+title: "Effect of dynamic mask speed on suppression of a moving stimulus: Effect of limited trajectory length"
+author: "Egor Ananyev"
+date: '2016-04-28'
+output:
+    html_document:
+        toc: true
+---
+
+<style type="text/css">
+body, td{
+  font-family: Cambria;
+}
+code.r{
+  font-family: Inconsolata;
+}
+</style>
+
+# Preparing the data
+
+## Loading the packages and data
+```{r set-options, message=F}
+options(width=108)
+out=F
+# The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
+library(BayesFactor)
+# Neat functions:
+db <- '/home/egor/Dropbox/' # on Linux
+db <- '~/Dropbox/' # on Mac
+db <- '/Users/Egor/Dropbox/' # Windows
+source(paste(db, 'Prog/R/myFunctions/blackTheme.R', sep=''))
+source(paste(db, 'Prog/R/myFunctions/pvalfn.R', sep=''))
+```
+
+# Bayes Factor
+
+## bcfs-1
+
+### Mask-target match
+
+```{r}
+source(paste(db, 'Projects/dm/dm/an/subj-bcfs-1.Rmd', sep=''))
+# conventional model
+m_mpMatch_full <- lmer(RT~trialN+mpMatch_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_mpMatch_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# Bayes Factor on mask-target match:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+regFull <- lmBF(RT ~ mpMatch_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+# Bayes Factor on mask-target match X mask speed interaction:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regNi <- lmBF(RT ~ mpMatch_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regNi / regRand
+regFull <- lmBF(RT ~ mpMatch_ctr + maskSpeed_ctr + mpMatch_ctr:maskSpeed_ctr + SubjID, 
+                data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regNi / regFull
+regFull / regNi
+#write.table(bf,'clipboard',sep='\t',row.names=T)
+```
+
+### Mask pattern vs target pattern of motion
+
+```{r}
+# conventional model
+m_mpType_full <- lmer(RT~trialN+subjThresh_ctr*mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+
+                              (1|SubjID), md)
+pvalfn(m_mpType_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# Bayes Factor on mask-target match:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+
+# Contribution of the mask pattern of motion:
+regFull <- lmBF(RT ~ mpRotMask_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+
+# Contribution of the target pattern of motion
+regFull <- lmBF(RT ~ mpRotTarg_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+
+# Contribution of the mask X target pattern of motion interaction:
+regPart <- lmBF(RT ~ mpRotTarg_ctr + mpRotMask_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, 
+                whichRandom = 'SubjID')
+regFull <- lmBF(RT ~ mpRotTarg_ctr + mpRotMask_ctr + maskSpeed_ctr + 
+                    mpRotTarg_ctr:mpRotMask_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regFull
+regFull / regPart 
+```
+
+## bcfs-4
+
+```{r}
+source(paste(db, 'Projects/dm/dm/an/subj-bcfs-4.Rmd', sep=''))
+# conventional model
+m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# Bayes Factor on the target speed:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+# Bayes model of the mask X target speed interaction
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regNi <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regNi / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + targSpeed_ctr:maskSpeed_ctr + SubjID, 
+                data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regNi / regFull
+regFull / regNi
+#write.table(bf,'clipboard',sep='\t',row.names=T)
+```
+
+## bcfs-5
+
+```{r}
+source(paste(db, 'Projects/dm/dm/an/subj-bcfs-5.Rmd', sep=''))
+# conventional model
+m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr+subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# target speed:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+# interaction
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regNi <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regNi / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + targSpeed_ctr:maskSpeed_ctr + SubjID, 
+                data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regNi / regFull
+regFull / regNi
+#write.table(bf,'clipboard',sep='\t',row.names=T)
+```
+
+Neither model is preferred when compared to the random intercept-only model or to each other. I.e., the interaction term does not seem to contribute.
+
+## bcfs-6
+
+```{r}
+source(paste(db, 'Projects/dm/dm/an/subj-bcfs-6.Rmd', sep=''))
+# conventional model
+m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr+subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# target speed:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+# interaction:
+mdNoNa <- md[!is.na(md$RT),]
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regNi <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regNi / regRand
+regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + targSpeed_ctr:maskSpeed_ctr + SubjID, 
+                data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regNi / regFull
+regFull / regNi
+```
+
+## bcfs-7
+
+```{r}
+source(paste(db, 'Projects/dm/dm/an/subj-bcfs-7.Rmd', sep=''))
+# conventional model
+m_full <- lmer(RT~maskSwitch_ctr*maskSpeed_ctr+subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+# dataset:
+mdNoNa <- md[!is.na(md$RT),]
+# target speed:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regPart <- lmBF(RT ~ maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regPart / regRand
+regFull <- lmBF(RT ~ maskSwitch_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+# interaction:
+regRand <- lmBF(RT ~ SubjID, data = mdNoNa, whichRandom = 'SubjID')
+regNi <- lmBF(RT ~ maskSwitch_ctr + maskSpeed_ctr + SubjID, data=mdNoNa, whichRandom = 'SubjID')
+regNi / regRand
+regFull <- lmBF(RT ~ maskSwitch_ctr + maskSpeed_ctr + maskSwitch_ctr:maskSpeed_ctr + SubjID, 
+                data=mdNoNa, whichRandom = 'SubjID')
+regFull / regRand
+regNi / regFull
+regFull / regNi
+```

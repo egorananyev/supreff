@@ -39,16 +39,18 @@ source(paste(db, 'Prog/R/myFunctions/blackTheme.R', sep=''))
 source(paste(db, 'Prog/R/myFunctions/pvalfn.R', sep=''))
 # Read in the Excel worksheet:
 dataDir <- paste(db, 'Projects/dm/data/', sep='')
-subjList <- read.xlsx(file=paste(db,'Projects/dm/Subjects.xlsx',sep=''), 1, colIndex=c(1:8), header=T)
-subjList$Subj<- as.factor(subjList$Subj)
-condList <- c('s1')
+condDir <- paste(dataDir,'bcfs4/', sep='')
+subjList <- read.xlsx(file=paste(dataDir, 'Subjects.xlsx', sep=''), sheetName='bcfs4', 
+                      colIndex=c(1:7), header=T)
+subjList$Subj <- as.factor(subjList$Subj)
+condList <- c('s1','s2','s3')
 # dropSubjs <- c(2) # X[ ! X$Variable1 %in% c(11,12), ]
 nConds <- 13
 nc <- nConds-1 # the number of conditions without the blank
 shortRT <- .5
 outlFac <- 2.5 # outlier factor
 # Gathering the directories from the data directory:
-allDirs <- dir(dataDir)
+allDirs <- dir(condDir)
 ```
 
 ## Pre-processing the data
@@ -64,15 +66,15 @@ for(curSubj in 1:length(subjList$Subj)){ #going through all dirs
     for(curCond in 1:length(condList)){
         print(paste('curSubj =', as.character(curSubj), 'curCond =', 
                     as.character(curCond)))
-        grepPattern <- paste('dm6_p-', subjList$Subj[curSubj], '_dom-', 
+        grepPattern <- paste('dm_p-', subjList$Subj[curSubj], '_dom-', 
                              subjList$DomEye[curSubj],
                              '_', condList[curCond], '_t0_', sep='')
         subjDir <- allDirs[grep(grepPattern, allDirs)]
         # With this directory, extracting data:
-        subjDataFN <- paste(dataDir, subjDir, '/', subjDir, '_trials.tsv', sep='')
+        subjDataFN <- paste(condDir, subjDir, '/', subjDir, '_trials.tsv', sep='')
         if(file.exists(subjDataFN)){
             ss <- read.table(subjDataFN, sep='\t', nrows=nConds, header=T)
-            sumss <- ss[,1:27]
+            sumss <- ss[,1:28]
             # Inserting subject ID and subject threshold
             sumss$SubjID <- subjList$Subj[curSubj]
             sumss$subjThresh <- subjList$subjThresh[curSubj]
@@ -109,6 +111,7 @@ for(curSubj in 1:length(subjList$Subj)){ #going through all dirs
     rtna[rtna==0] <- NA
     rtna[rtna<shortRT] <- NA
     # Dealing with the outliers:
+    sumss$RT0 <- rowSums(is.na(rtna))
     sumss$RTna_mean <- c(rowMeans(rtna[1:nc,],na.rm=T),0)
     sumss$RTna_median <- c(rowMedians(as.matrix(rtna[1:nc,]),na.rm=T),0)
     sumss$RTna_sd <- c(apply(rtna[1:nc,],1,sd,na.rm=T),0)
@@ -134,6 +137,7 @@ for(curSubj in 1:length(subjList$Subj)){ #going through all dirs
 }
 # ds$maskSpeed <- as.factor(ds$maskSpeed)
 # ds$targSpeed <- as.factor(ds$targSpeed)
+shams <- ds[ds$targSpeed==0,]
 ds <- ds[ds$targSpeed!=0,]
 
 # Splitting subjects into high- and low-threshold pools:
@@ -186,22 +190,19 @@ ggplot(subjList, aes(x=altSubj, y=subjThresh)) + geom_bar(stat='identity') +
 if(out){dev.off()}
 ```
 
-## Non-breaking trials
-```{r, fig.height=3, fig.width=5}
-# Line plots for non-broken trials
-
-## Slow target
-ggplot(ds[ds$targSpeed==1,], aes(x=maskSpeed, y=cnt_RTna/24, group=SubjID, colour=SubjID)) +  
-    geom_line() + geom_point() + labs(x='Mask Speed', colour='Subject ID',
-                                      y='Number of non-breaking trials') + theme_bw()
-## Fast target
-ggplot(ds[ds$targSpeed==5,], aes(x=maskSpeed, y=cnt_RTna/24, group=SubjID, colour=SubjID)) +  
-    geom_line() + geom_point() + labs(x='Mask Speed', colour='Subject ID',
-                                      y='Number of non-breaking trials') + theme_bw()
-ss = ddply(ds, .(maskSpeed,targSpeed), summarise, `Mean non-breaking trials`=mean(cnt_RTna/24))
-## Mean non-breaking trials
-ggplot(ss, aes(x=maskSpeed, y=`Mean non-breaking trials`, colour=targSpeed, group=targSpeed)) +  
-    geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
+## False alarms
+```{r, fig.height=3, fig.width=4}
+shams$fas <- shams$n*3 - shams$RT0 #multiplying by 3 bc there were 3 sessions
+shamSum <- ddply(shams, .(SubjID), summarise, fasTot=sum(fas), nTot=sum(n*3))
+shamSum$fasP <- shamSum$fas / shamSum$n
+print(shamSum)
+p <- ggplot(shamSum, aes(x=SubjID, y=fasP)) + geom_bar(stat='identity') + 
+    theme_bw() + labs(y='False Alarms', x='Participant') + #ylim(0,1) +
+    scale_y_continuous(limits = c(0,1), breaks=seq(0,1,.25)) + 
+    theme(legend.position='none', axis.text.x = element_blank(), panel.border = element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9), 
+          panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank())
+plot(p)
 ```
 
 ## RT SDs
@@ -280,33 +281,23 @@ ggplot(ds, aes(x=factor(maskSpeed), y=RTna_norm, colour=factor(targSpeed))) + ge
     labs(x='Mask Speed', colour='Target Speed', y='Mean RT') + theme_bw()
 ```
 
-## Line plots of summary RTs
+## Normalized plots for high- and low-thresh subjects
 
-### Raw
+### High-threshold subjects
 ```{r, fig.height=3, fig.width=5}
-ss = ddply(ds, .(maskSpeed,targSpeed), summarise, `Mean RT`=mean(RTna_mean))
-ggplot(ss, aes(x=maskSpeed, y=`Mean RT`, colour=factor(targSpeed), group=targSpeed)) +  
+ss = ddply(dsTh, .(maskSpeed,targSpeed), summarise, `Mean Normalized RT`=mean(RTna_norm))
+ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=targSpeed, group=targSpeed)) +  
     geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
 ```
 
-### Normalized
+### Low-threshold subjects
 ```{r, fig.height=3, fig.width=5}
-ss = ddply(ds, .(maskSpeed,targSpeed), summarise, `Mean Normalized RT`=mean(RTna_norm))
-ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=factor(targSpeed), 
-               group=targSpeed)) +  
+ss = ddply(dsTl, .(maskSpeed,targSpeed), summarise, `Mean Normalized RT`=mean(RTna_norm))
+ggplot(ss, aes(x=maskSpeed, y=`Mean Normalized RT`, colour=targSpeed, group=targSpeed)) +  
     geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
 ```
 
 ## Smoothed on raw
-
-### Quartic effects with low-threshold participants
-```{r, fig.height=3, fig.width=5}
-ssTl <- md[md$SubjID %in% subjTl,]
-ssTh <- md[md$SubjID %in% subjTh,]
-#ggplot(ssTl, aes(x=maskSpeed, y=RT, colour=factor(targSpeed), group=factor(targSpeed))) +  
-#    stat_smooth(method='lm', formula=y~ns(x,4)) + 
-#    labs(x='Mask Speed', y='RT',colour='Target Speed') + theme_bw()
-```
 
 ### Normalized data set
 ```{r}
@@ -323,28 +314,8 @@ mdn$subjNormRT <- mdn$RT / mdn$subjMean
 subjMeans <- ddply(mdn, .(SubjID, targSpeed, maskSpeed), summarise, subjMean=mean(subjNormRT, na.rm=T))
 ```
 
-### Loess and Lin
+### Linear fit (publication format)
 ```{r, fig.height=4, fig.width=7}
-p <- ggplot(subjMeans, aes(x=maskSpeed, y=subjMean, colour=factor(targSpeed))) +
-    stat_smooth(method='loess', alpha=.15, aes(fill=factor(targSpeed)), show.legend=F, 
-                se=T, size=.6, na.rm=T, span=.8) + 
-    geom_point(data=subjMeans, aes(x=maskSpeed, y=subjMean, colour=factor(targSpeed)), 
-               position=position_dodge(width=.5), size=.7, alpha=.35) +
-    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
-         y='Normalized RT', colour='   Target\n   Speed') + 
-    guides(colour = guide_legend(override.aes=list(size=1.5, alpha=.5),
-                                 keyheight=.3, default.unit='inch')) +
-    scale_x_continuous(breaks=unique(mdn$maskSpeed)) + 
-    scale_colour_manual(breaks=c(1,5), labels=c(
-            expression(paste('1', degree, '/s', sep='')),
-            expression(paste('5', degree, '/s', sep=''))),
-        values=c('#E69F00', '#0072B2')) + theme_bw() + #ylim(.7,1.4) +
-    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
-          axis.text=element_text(size=8), axis.title=element_text(size=9),
-          legend.text=element_text(size=8), legend.title=element_text(size=9),
-          legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
-          legend.background = element_rect(fill='transparent'))
-if(!out){plot(p)}else{png('expt2loess.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
 mdns <- ddply(mdn, .(SubjID, subjThresh, targSpeed, maskSpeed), summarise,
                 meanSubjST = mean(subjNormRT, na.rm=T))
 mdnsum <- ddply(mdns, .(targSpeed, maskSpeed), summarise,
@@ -366,13 +337,54 @@ p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=factor(targSpeed),
     scale_colour_manual(breaks=c(1,5), labels=c(
             expression(paste('1', degree, '/s', sep='')),
             expression(paste('5', degree, '/s', sep=''))),
-        values=c('#E69F00', '#0072B2')) + theme_bw() + #ylim(.8,1.2) +
+        values=c('#E69F00', '#0072B2')) + theme_bw() + ylim(.8,1.2) +
     theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
           axis.text=element_text(size=8), axis.title=element_text(size=9),
           legend.text=element_text(size=8), legend.title=element_text(size=9),
           legend.key = element_blank(), #legend.margin=unit(-.04, 'in'),
           legend.background = element_rect(fill='transparent'))
-if(!out){plot(p)}else{png('expt2lin.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+if(!out){plot(p)}else{png('dm4lin.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+```
+
+## Non-breaking trials
+```{r, fig.height=3, fig.width=5}
+# Line plots for non-broken trials
+ss = ddply(ds, .(maskSpeed,targSpeed), summarise, `Mean non-breaking trials`=mean(cnt_RTna/24))
+## Mean non-breaking trials
+ggplot(ss, aes(x=maskSpeed, y=`Mean non-breaking trials`, colour=targSpeed, group=targSpeed)) +  
+    geom_line() + geom_point() + labs(x='Mask Speed', colour='Target Speed') + theme_bw()
+```
+
+## Predicted pattern
+```{r, fig.height=4, fig.width=7}
+expData <- mdnsum
+expData$seCondST <- 0.03
+expData$meanCondST <- c(1.05,1.1,1.05,.95,.9,.85,
+                        .85,.9,.95,.97,1,.95)
+#expData$meanCondST <- expData$meanCondST + .075
+#expData$meanCondST <- expData$meanCondST + runif(10,.01,.03)
+#expData$meanCondST <- expData$meanCondST + c(0,0,.3,.3,.1,.1,-.1,-.1,-.1,-.1,-.1,-.1)
+p <- ggplot(expData, aes(x=maskSpeed, y=meanCondST, colour=factor(targSpeed), 
+                        group=factor(targSpeed), 
+                        ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
+    geom_point(position=dodge, size=1, alpha=alpha) +
+    geom_line(position=dodge, alpha=alpha) +
+    geom_linerange(position=dodge, show.legend=F, alpha=alpha) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed),
+                       labels=as.character(unique(ss$maskSpeed))) + theme_bw() +
+    labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), y='Normalized Suppression Time',
+         colour=' Target\n Speed') + 
+    guides(colour=guide_legend(keyheight=.2, default.unit='inch')) +
+    scale_colour_manual(breaks=c(1,5), labels=c(
+            expression(paste('1', degree, '/s', sep='')),
+            expression(paste('5', degree, '/s', sep=''))),
+        values=c('#E69F00', '#0072B2')) + theme_bw() + ylim(.8,1.2) +
+    theme(panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank(),
+          axis.text=element_text(size=8), axis.title=element_text(size=9),
+          legend.text=element_text(size=8), legend.title=element_text(size=9),
+          legend.key = element_blank(), #legend.margin=unit(-.04, 'in'),
+          legend.background = element_rect(fill='transparent'))
+if(!out){plot(p)}else{png('expt2linPred.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
 # Linear models
@@ -393,40 +405,46 @@ head(md)
 
 ## Full linear model
 ```{r}
-#m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
-#pvalfn(m_full)
-#write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
+m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
+pvalfn(m_full)
+# write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
 ```
 
 ## Detecting slope differences at different points of the graph
 ```{r}
 # slow mask data set:
-#sm <- md[md$maskSpeed<=1,]
-#sm$maskSpeed_ctr <- sm$maskSpeed - .7
-#m_slow <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),sm)
-#pvalfn(m_slow)
+sm <- md[md$maskSpeed<=1,]
+sm$maskSpeed_ctr <- sm$maskSpeed - .7
+m_slow <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),sm)
+pvalfn(m_slow)
 # write.table(pvalfn(m_slow),'clipboard',sep='\t',row.names=T)
 # fast mask data set:
-#fm <- md[md$maskSpeed<=2 & md$maskSpeed>=1,]
-#fm$maskSpeed_ctr <- fm$maskSpeed - 1.5
-#m_fast <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),fm)
-#pvalfn(m_fast)
+fm <- md[md$maskSpeed<=2 & md$maskSpeed>=1,]
+fm$maskSpeed_ctr <- fm$maskSpeed - 1.5
+m_fast <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),fm)
+pvalfn(m_fast)
 # write.table(pvalfn(m_fast),'clipboard',sep='\t',row.names=T)
 # very fast mask data set:
-#vfm <- md[md$maskSpeed>=1,]
-#vfm$maskSpeed_ctr <- vfm$maskSpeed - 1.5
-#m_vfast <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),vfm)
-#pvalfn(m_vfast)
+vfm <- md[md$maskSpeed>=1,]
+vfm$maskSpeed_ctr <- vfm$maskSpeed - 1.5
+m_vfast <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),vfm)
+pvalfn(m_vfast)
 # write.table(pvalfn(m_vfast),'clipboard',sep='\t',row.names=T)
 ```
 
 ## Non-linear analyses
 
 ```{r}
-#mdSum <- ddply(md, c('maskSpeed_ctr'), summarise, meanRT = mean(RT, na.rm=T))
-#head(mdSum)
-#fitLin <- lm(meanRT~maskSpeed_ctr, data=mdSum)
-#fitSquare <- nls(meanRT~a+b*maskSpeed_ctr^2, data=mdSum, start=list(a=1,b=0))
-#summary(fitSquare)
-#anova(fitLin, fitSquare)
+mdSum <- ddply(md, c('maskSpeed_ctr'), summarise, meanRT = mean(RT, na.rm=T))
+head(mdSum)
+fitLin <- lm(meanRT~maskSpeed_ctr, data=mdSum)
+fitSquare <- nls(meanRT~a+b*maskSpeed_ctr^2, data=mdSum, start=list(a=1,b=0))
+summary(fitSquare)
+anova(fitLin, fitSquare)
+# fitCube <- nls(meanRT~a+b*maskSpeed_ctr^3, data=mdSum, start=list(a=1,b=0))
+# summary(fitCube)
+# anova(fitSquare, fitCube)
+# fitQuat <- nls(RT~a+b*maskSpeed_ctr^4, data=md, start=list(a=1,b=0))
+# summary(fitQuat)
+# anova(fitCube, fitQuat)
 ```
