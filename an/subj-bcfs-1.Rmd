@@ -21,7 +21,7 @@ code.r{
 ## Loading the packages and data
 ```{r set-options, message=F, warning=F}
 options(width=108)
-out=F
+out=T
 # The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
 library(xlsx)
 library(ggplot2)
@@ -166,12 +166,7 @@ p <- ggplot(subjList, aes(x=altSubj, y=subjThresh)) + geom_bar(stat='identity') 
     theme(legend.position='none', axis.text.x = element_blank(), panel.border = element_blank(),
           axis.text=element_text(size=8), axis.title=element_text(size=9))
 plot(p)
-if(out){tiff('dm1thresh.tiff', width=3.5, height=2.6, units='in', res=300)}
-if(out){plot(p)}
-if(out){dev.off()}
-if(out){pdf("dm1thresh.pdf", width=4, height=3)}
-if(out){plot(p)}
-if(out){dev.off()}
+if(!out){plot(p)}else{png('dm1thresh.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 summary(subjList$subjThresh)
 sd(subjList$subjThresh) # standard deviation
 sum(subjList$subjThresh<1) # subjects with thresholds less than 1
@@ -179,7 +174,7 @@ sum(subjList$subjThresh>1) # subjects with thresholds greater than 1
 ```
 
 ## False alarms
-```{r, fig.height=3, fig.width=4}
+```{r, fig.height=2.1, fig.width=3.5}
 shams$fas <- shams$n - shams$RT0
 shamSum <- ddply(shams, .(SubjID), summarise, fasTot=sum(fas), nTot=sum(n))
 shamSum$fasP <- shamSum$fas / shamSum$n
@@ -188,9 +183,6 @@ p <- ggplot(shamSum, aes(x=SubjID, y=fasP)) + geom_bar(stat='identity') +
     theme_bw() + labs(y='False Alarms', x='Participant') + #ylim(0,1) +
     scale_y_continuous(limits = c(0,1), breaks=seq(0,1,.25))
 p <- themefy(p)
-#    theme(legend.position='none', axis.text.x = element_blank(), panel.border = element_blank(),
-#          axis.text=element_text(size=8), axis.title=element_text(size=9), 
-#          panel.grid.minor.x=element_blank(), panel.grid.minor.y=element_blank())
 plot(p)
 ```
 
@@ -228,7 +220,7 @@ mdnsum_ht <- ddply(mdns[mdns$subjThresh>median(mdns$subjThresh),], .(motPat, mas
 ```
 
 ## Line plots
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 dodge <- position_dodge(width=0)
 alpha <- .6
 p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
@@ -242,11 +234,11 @@ p <- ggplot(mdnsum, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
          colour='   Motion Pattern') + ylim(.7,1.3) +
     guides(colour=guide_legend(keyheight=.3, default.unit='inch'))
 p <- themefy(p)
-if(!out){plot(p)}else{png('dm1lin4.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+if(!out){plot(p)}else{png('dm1lin.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
 ## Non-breaking trials
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 # computing mean and SD of subj means:
 mdnsNb <- ddply(ds, .(SubjID, subjThresh, motPat, maskSpeed), summarise,
                 meanSubjNb = mean(cnt_RTna/24, na.rm=T))
@@ -267,10 +259,11 @@ p <- themefy(p)
 if(!out){plot(p)}else{png('dm1nb.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
+<!--
 ## Expected patterns
 
 ### FSS for pattern and speed
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 expData = mdnsum
 expData$seCondST <- 0.08
 expData[expData['motPat']=='Linear Target\nLinear Mask', 'meanCondST'] <- 
@@ -291,11 +284,11 @@ p <- ggplot(expData, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat)
          colour='   Motion Pattern') + 
     guides(colour=guide_legend(keyheight=.3, default.unit='inch'))
 p <- themefy(p)
-if(!out){plot(p)}else{png('dm1linPred1.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+# if(!out){plot(p)}else{png('dm1linPred1.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
 ### FSS only for pattern
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 expData = mdnsum
 expData$seCondST <- 0.08
 expData[expData['motPat']=='Linear Target\nLinear Mask', 'meanCondST'] <- 
@@ -320,11 +313,11 @@ p <- ggplot(expData, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat)
           legend.text=element_text(size=8), legend.title=element_text(size=9),
           legend.key = element_blank(), legend.margin=unit(-.04, 'in'),
           legend.background = element_rect(fill='transparent'))
-if(!out){plot(p)}else{png('dm1linPred2.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+# if(!out){plot(p)}else{png('dm1linPred2.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
 
 ### Salience-driven
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 expData = mdnsum
 expData$seCondST <- 0.08
 expData[expData['motPat']=='Linear Target\nLinear Mask', 'meanCondST'] <- 
@@ -346,11 +339,13 @@ p <- ggplot(expData, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat)
          colour='   Motion Pattern') + 
     guides(colour=guide_legend(keyheight=.3, default.unit='inch'))
 p <- themefy(p)
-if(!out){plot(p)}else{png('dm1linPred3.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
+# if(!out){plot(p)}else{png('dm1linPred3.png', width=3.5, height=2.1, units='in', res=600); plot(p); dev.off()}
 ```
+-->
 
+<!--
 ## Line plots for Low- and High-Thresh Ps
-```{r, fig.height=4, fig.width=7}
+```{r, fig.height=2.1, fig.width=3.5}
 p <- ggplot(mdnsum_lt, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPat,
                     ymax=meanCondST+seCondST,  ymin=meanCondST-seCondST)) +
     geom_point(position=dodge, size=1, alpha=alpha) +
@@ -373,12 +368,15 @@ p <- ggplot(mdnsum_ht, aes(x=maskSpeed, y=meanCondST, colour=motPat, group=motPa
          colour='   Motion Pattern') + ylim(.6,1.6) +
     guides(colour=guide_legend(keyheight=.3, default.unit='inch'))
 p <- themefy(p)
-if(!out){plot(p)}else{png('dm1lin2_ht.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
+# if(!out){plot(p)}else{png('dm1lin2_ht.png', width=3.5, height=2, units='in', res=600); plot(p); dev.off()}
 ```
+-->
 
 # Linear models
 
-## Preparing the data set
+## DV: Suppression times
+
+### Preparing the data set
 ```{r}
 # Centering some variables:
 md$maskSpeed_ctr <- with(md, maskSpeed-targSpeed)
@@ -386,35 +384,60 @@ md$subjThresh_ctr <- with(md, subjThresh-mean(subjThresh))
 md$mpMatch_ctr <- with(md, ((mpMatch*2) - 1) )
 md$mpRotMask_ctr <- with(md, ((mpRotMask*2) - 1) )
 md$mpRotTarg_ctr <- with(md, ((mpRotTarg*2) - 1) )
-
 # Preparing the data set:
 md$trialN <- substr(md$trial, 2, 3)
 md$trialN <- as.numeric(md$trialN)
-
 head(md)
 ```
 
-## Mask/target congruence
+### Linear analyses
 ```{r}
+## Mask/target congruence
 m_mpMatch <- lmer(RT~trialN+mpMatch_ctr*maskSpeed_ctr+(1|SubjID),md)
 pvalfn(m_mpMatch)
+## Target/mask types
+m_mpType <- lmer(RT~trialN+mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+(1|SubjID), md)
+pvalfn(m_mpType)
+```
+
+<!--
+### Linear models with subj thresh
+```{r}
 #m_mpMatch_full <- lmer(RT~trialN+mpMatch_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
 #pvalfn(m_mpMatch_full)
 # write.table(pvalfn(m_mpMatch_full),'clipboard',sep='\t',row.names=T)
-```
-
-## Target/mask types
-```{r}
-m_mpType <- lmer(RT~trialN+mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+(1|SubjID), md)
-(pvalfn(m_mpType))
 #m_mpType_full <- lmer(RT~trialN+subjThresh_ctr*mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+
 #                              (1|SubjID), md)
 #(pvalfn(m_mpType_full))
 # write.table(pvalfn(m_mpType_full),'clipboard',sep='\t',row.names=T)
 ```
+-->
+
+### Non-linear analyses
+```{r}
+mdSum <- ddply(md, c('maskSpeed_ctr'), summarise, meanRT = mean(RT, na.rm=T))
+head(mdSum)
+fitLin <- lm(meanRT~maskSpeed_ctr, data=mdSum)
+fitSquare <- nls(meanRT~a+b*maskSpeed_ctr^2, data=mdSum, start=list(a=1,b=0))
+summary(fitSquare)
+anova(fitLin, fitSquare)
+```
+
+<!--
+### Cubic and quartic
+```{r}
+# fitCube <- nls(meanRT~a+b*maskSpeed_ctr^3, data=mdSum, start=list(a=1,b=0))
+# summary(fitCube)
+# anova(fitSquare, fitCube)
+# fitQuat <- nls(RT~a+b*maskSpeed_ctr^4, data=md, start=list(a=1,b=0))
+# summary(fitQuat)
+# anova(fitCube, fitQuat)
+```
+-->
 
 ## Analysis of non-responses
  
+### Preparing the data set
 ```{r}
 # Constructing a new data set with na response count:
 dsna <- ddply(md, .(SubjID, subjThresh_ctr, maskSpeed_ctr, mpRotMask_ctr, mpRotTarg_ctr, 
@@ -425,54 +448,25 @@ head(dsna)
 dsna_sum <- ddply(dsna, .(SubjID, subjThresh_ctr), summarise, meanNa=mean(nNa), sdNa=sd(nNa),
                   countNa=sum(nNa))
 dsna_sum
+```
 
+### Linear analyses
+```{r}
 # Targ/mask congruence
 m_na_mpMatch <- lmer(nNa ~ mpMatch_ctr * maskSpeed_ctr + (1|SubjID), dsna)
 pvalfn(m_na_mpMatch)
-#m_na_mpMatch_full <- lmer(nNa ~ mpMatch_ctr * maskSpeed_ctr * subjThresh_ctr + (1|SubjID), dsna)
-#pvalfn(m_na_mpMatch_full)
-
 # Target/mask types
 m_na_mpType <- lmer(nNa ~ mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr + (1|SubjID), dsna)
 pvalfn(m_na_mpType)
+```
+
+<!--
+### Linear models with subj thresh
+```{r}
+#m_na_mpMatch_full <- lmer(nNa ~ mpMatch_ctr * maskSpeed_ctr * subjThresh_ctr + (1|SubjID), dsna)
+#pvalfn(m_na_mpMatch_full)
 #m_na_mpType_full <- lmer(nNa ~ mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr * subjThresh_ctr + 
 #                        (1|SubjID), dsna)
 #pvalfn(m_na_mpType_full)
 ```
-
-## Non-linear analyses
-
-```{r}
-mdSum <- ddply(md, c('maskSpeed_ctr'), summarise, meanRT = mean(RT, na.rm=T))
-head(mdSum)
-fitLin <- lm(meanRT~maskSpeed_ctr, data=mdSum)
-fitSquare <- nls(meanRT~a+b*maskSpeed_ctr^2, data=mdSum, start=list(a=1,b=0))
-summary(fitSquare)
-anova(fitLin, fitSquare)
-# fitCube <- nls(meanRT~a+b*maskSpeed_ctr^3, data=mdSum, start=list(a=1,b=0))
-# summary(fitCube)
-# anova(fitSquare, fitCube)
-# fitQuat <- nls(RT~a+b*maskSpeed_ctr^4, data=md, start=list(a=1,b=0))
-# summary(fitQuat)
-# anova(fitCube, fitQuat)
-```
-
-# Bayes Factor
-```{r}
-#library(BayesFactor)
-#mdB <- md[!is.na(md$RT),]
-#mdB$trial <- as.factor(mdB$trial)
-#mdB$SubjID <- as.factor(mdB$SubjID)
-#mdB$mpRotMask_ctr <- as.factor(mdB$mpRotMask_ctr)
-#mdB$maskSpeed_ctr <- as.factor(mdB$maskSpeed_ctr)
-#mdB$mpRotTarg_ctr <- as.factor(mdB$mpRotTarg_ctr)
-#bfTop <- anovaBF(RT ~ SubjID + trial + mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr, 
-                  #data=mdB, whichRandom = c('SubjID'), whichModels='top')
-#print(bfTop)
-#bfCued <- anovaBF(st ~ cued + subjId + sentId, data=df,
-                  #whichRandom = c('subjId','sentId'))
-#bfFull/ bfCued
-#m_mpType_full <- lmer(RT~trialN+subjThresh_ctr*mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+
-                              #(1|SubjID), md)
-#(pvalfn(m_mpType_full))
-```
+-->
