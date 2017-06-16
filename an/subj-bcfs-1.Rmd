@@ -18,10 +18,10 @@ code.r{
 
 # Preparing the data
 
-## Loading the packages and data
+## Packages and data
 ```{r set-options, message=F, warning=F}
 options(width=108)
-out=T
+out=F
 # The list of subjects, the order of conditions, and the thresholds are derived from Subjects.xlsx
 library(xlsx)
 library(ggplot2)
@@ -393,11 +393,13 @@ head(md)
 ### Linear analyses
 ```{r}
 ## Mask/target congruence
-m_mpMatch <- lmer(RT~trialN+mpMatch_ctr*maskSpeed_ctr+(1|SubjID),md)
+m_mpMatch <- lmer(RT~mpMatch_ctr*maskSpeed_ctr+(1|SubjID),md)
 pvalfn(m_mpMatch)
+#write.table(pvalfn(m_mpMatch),'clipboard',sep='\t',row.names=T)
 ## Target/mask types
-m_mpType <- lmer(RT~trialN+mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+(1|SubjID), md)
+m_mpType <- lmer(RT~mpRotMask_ctr*mpRotTarg_ctr*maskSpeed_ctr+(1|SubjID), md)
 pvalfn(m_mpType)
+#write.table(pvalfn(m_mpType),'clipboard',sep='\t',row.names=T)
 ```
 
 <!--
@@ -455,9 +457,11 @@ dsna_sum
 # Targ/mask congruence
 m_na_mpMatch <- lmer(nNa ~ mpMatch_ctr * maskSpeed_ctr + (1|SubjID), dsna)
 pvalfn(m_na_mpMatch)
+#write.table(pvalfn(m_na_mpMatch),'clipboard',sep='\t',row.names=T)
 # Target/mask types
 m_na_mpType <- lmer(nNa ~ mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr + (1|SubjID), dsna)
 pvalfn(m_na_mpType)
+#write.table(pvalfn(m_na_mpType),'clipboard',sep='\t',row.names=T)
 ```
 
 <!--

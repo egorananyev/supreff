@@ -100,6 +100,20 @@ regPart / regFull
 regFull / regPart 
 ```
 
+### Mask pattern effect on no-response trials
+
+```{r}
+# conventional model:
+m_na_mpType <- lmer(nNa ~ mpRotMask_ctr * mpRotTarg_ctr * maskSpeed_ctr + (1|SubjID), dsna)
+# Contribution of the mask pattern of motion:
+regRand <- lmBF(nNa ~ SubjID, data = dsna, whichRandom = 'SubjID')
+regPart <- lmBF(nNa ~ maskSpeed_ctr + SubjID, data=dsna, whichRandom = 'SubjID')
+regFull <- lmBF(nNa ~ mpRotMask_ctr + maskSpeed_ctr + SubjID, data=dsna, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
+```
+
 ## bcfs-4
 
 ```{r}
@@ -187,6 +201,20 @@ regFull <- lmBF(RT ~ targSpeed_ctr + maskSpeed_ctr + targSpeed_ctr:maskSpeed_ctr
 regFull / regRand
 regNi / regFull
 regFull / regNi
+```
+
+### Target X mask speed interaction on no-response trials
+
+```{r}
+# conventional model:
+m_na <- lmer(nNa ~ targSpeed_ctr * maskSpeed_ctr + (1|SubjID), dsna)
+# Contribution of the mask pattern of motion:
+regRand <- lmBF(nNa ~ SubjID, data = dsna, whichRandom = 'SubjID')
+regPart <- lmBF(nNa ~ targSpeed_ctr + maskSpeed_ctr + SubjID, data=dsna, whichRandom = 'SubjID')
+regFull <- lmBF(nNa ~ targSpeed_ctr * maskSpeed_ctr + SubjID, data=dsna, whichRandom = 'SubjID')
+regFull / regRand
+regPart / regFull
+regFull / regPart 
 ```
 
 ## bcfs-7

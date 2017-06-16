@@ -363,12 +363,14 @@ mdnsumNb <- ddply(mdnsNb, .(targSpeed, maskSpeed), summarise,
                 meanCondNb = mean(meanSubjNb),
                 seCondNb = sd(meanSubjNb) / sqrt(length(SubjID)))
 mdnsumNb$targSpeed <- as.factor(mdnsumNb$targSpeed)
-mdnsumNb$maskSpeed <- as.factor(mdnsumNb$maskSpeed)
+#mdnsumNb$maskSpeed <- as.factor(mdnsumNb$maskSpeed)
 # plot
 p <- ggplot(mdnsumNb, aes(x=maskSpeed, y=meanCondNb, colour=targSpeed, group=targSpeed,
                           ymin=meanCondNb-seCondNb, ymax=meanCondNb+seCondNb)) +  
-    geom_line(alpha=alpha) + geom_point(alpha=alpha) + 
+    geom_line(alpha=alpha) + geom_point(alpha=alpha, size=1) + 
     geom_linerange(position=dodge, show.legend=F, alpha=alpha) + #ylim(0,.2) +
+    scale_x_continuous(breaks=unique(ss$maskSpeed),
+                       labels=as.character(unique(ss$maskSpeed))) +
     labs(x=expression(paste('Mask Speed (', degree, '/s)', sep='')), 
          y='Proportion Non-Broken Trials',
          colour=' Target\n Speed') +
@@ -433,9 +435,9 @@ head(md)
 ```{r}
 m <- lmer(RT~targSpeed_ctr*maskSpeed_ctr+(1|SubjID),md)
 pvalfn(m)
+write.table(pvalfn(m),'clipboard',sep='\t',row.names=T)
 #m_full <- lmer(RT~targSpeed_ctr*maskSpeed_ctr*subjThresh_ctr+(1|SubjID),md)
 #pvalfn(m_full)
-# write.table(pvalfn(m_full),'clipboard',sep='\t',row.names=T)
 ```
 
 ### Detecting slope differences at different points of the graph
@@ -503,4 +505,5 @@ dsna_sum
 # Targ/mask congruence
 m_na <- lmer(nNa ~ targSpeed_ctr * maskSpeed_ctr + (1|SubjID), dsna)
 pvalfn(m_na)
+write.table(pvalfn(m_na),'clipboard',sep='\t',row.names=T)
 ```
