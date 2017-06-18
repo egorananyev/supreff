@@ -1,0 +1,106 @@
+---
+title: "Frequency Analysis of Stimuli"
+author: "Egor Ananyev"
+date: "6/16/2017"
+output:
+    html_document:
+        toc: true
+---
+
+<style type="text/css">
+body, td{
+  font-family: Cambria;
+}
+code.r{
+  font-family: Inconsolata;
+}
+</style>
+
+```{r set-options, message=F}
+# options(width=108)
+out=F
+```
+
+# Data prep
+
+## Read in the data
+```{r}
+library(png)
+library(spectral)
+db <- '/Users/Egor/Dropbox/' # Windows & Mac
+stimDir <- paste(db, 'Projects/dm/stimuli/targ1-v1_mask1-v1/', sep='')
+```
+
+## Setting variables
+```{r}
+# RGB+Y grayscale values
+y <- .66
+g <- .58
+r <- g*165/255
+b <- r*160/255
+# screen resolution and stimulus dimensions
+res <- c(1680,1050) # resolution
+offs <- c(313,307) # offsets along x and y (169,165)
+stimSz <- 278 # 151
+```
+
+# SF
+
+## Preparing the target image
+```{r}
+# read in the last frame:
+frame <- readPNG(paste(stimDir, dir(stimDir)[length(dir(stimDir))], sep=''))
+# plotting:
+#plot(1:2, type='n')
+xEdges <- c(res[1]/2-offs[1]-round(stimSz/2),
+            res[1]/2-offs[1]+round(stimSz/2))
+yEdges <- c(res[2]/2-offs[2]-round(stimSz/2),
+            res[2]/2-offs[2]+round(stimSz/2))
+targIm <- frame[yEdges[1]:yEdges[2],xEdges[1]:xEdges[2],]
+# identifying the fixation coordinates:
+fix <- which(targIm==1)
+## checking for symmetry; the two numbers should be the same:
+# dimSz <- length(targIm[,1,1]) # length of the first two dimensions
+# (dimSz*dimSz/2)-fix[1]
+# fix[length(fix)]-(dimSz*dimSz/2)
+targIm[fix] <- 0 # removing the fixation dot
+## plotting the image:
+# rasterImage(targIm, 1.2, 1.27, 1.8, 1.73)
+```
+
+## SF analysis of target
+```{r}
+fftOut <- spec.fft(targIm[,,1])
+# plot(fftOut)
+```
+
+## Mask image
+```{r}
+xEdgesMask <- c(res[1]/2+offs[1]+1-round(stimSz/2),
+                res[1]/2+offs[1]+1+round(stimSz/2))
+yEdgesMask <- c(res[2]/2-offs[2]-round(stimSz/2),
+                res[2]/2-offs[2]+round(stimSz/2))
+maskIm <- frame[yEdgesMask[1]:yEdgesMask[2],xEdgesMask[1]:xEdgesMask[2],]
+maskIm <- maskIm[,,1] + maskIm[,,2] + maskIm[,,3]
+maskIm <- maskIm/max(maskIm)
+maskFix <- which(maskIm==1)
+maskIm[which(maskIm==1)] <- 0
+# plot(1:2, type='n')
+# rasterImage(maskIm, 1.2, 1.27, 1.8, 1.73)
+```
+
+```{r}
+
+maskIm <- frame[yEdgesMask[1]:yEdgesMask[2],xEdgesMask[1]:xEdgesMask[2],]
+maskIm[(maskIm[,,1]+maskIm[,,2])==2] <- y
+maskIm[maskIm[,,1]==1] <- r
+maskIm[maskIm[,,2]==1] <- g
+maskIm[maskIm[,,3]==1] <- b
+plot(1:2, type='n')
+rasterImage(maskIm, 1.2, 1.27, 1.8, 1.73)
+```
+
+```{r}
+fftOutMask <- spec.fft(maskIm)
+# plot(fftOutMask)
+```
