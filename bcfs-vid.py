@@ -320,18 +320,22 @@ for thisTrial in trials:
     # efficient to store this as a variable since it is fixed (for a given trial):
     preStimInterval = 0 #np.random.rand(1)*thisTrial['targOnsetJit']
     trials.data.add('thisPreStimInterval', preStimInterval)
-    stimOffset = (preStimInterval + (thisTrial['targMaxDur']-win.monitorFramePeriod*0.75))
+    stimOffset = (preStimInterval + \
+                    (thisTrial['targMaxDur']-win.monitorFramePeriod*0.75))
     fadeInNofFrames = round( frameRate * (stimOffset - preStimInterval) )
     thisTargContin = thisTrial['targContin']
     thisMaskContin = thisTrial['maskContin']
     thisTask = thisTrial['taskDet0Dir1Loc2']
     # Variables set to random values:
-    thisTargDir = np.random.choice([-1,1])
+    #thisTargDir = np.random.choice([-1,1])
+    thisTargDir = 1
     trials.data.add('thisTargDir', thisTargDir)
-    thisTargLoc = np.random.choice([thisTrial['targLoc1'], \
-        thisTrial['targLoc2']])
+    #thisTargLoc = np.random.choice([thisTrial['targLoc1'], \
+        #thisTrial['targLoc2']])
+    thisTargLoc = thisTrial['targLoc1']
     trials.data.add('thisTargLoc', thisTargLoc)
-    thisTargInitPos = np.random.choice([0,.25,.5,.75])
+    #thisTargInitPos = np.random.choice([0,.25,.5,.75])
+    thisTargInitPos = 0
     trials.data.add('thisTargInitPos', thisTargInitPos)
     # print 'thisTargInitPos: ' + str(thisTargInitPos)
     thisTargVertices = thisTrial['targVertices']

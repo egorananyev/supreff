@@ -57,7 +57,7 @@ frame <- readPNG(paste(stimDir, fileList[nFrames], sep=''))
 ```
 
 ## Preparing the target image
-```{r, fig.width=3, fig.height=3}
+```{r}
 # plotting:
 #plot(1:2, type='n')
 cutTarg <- function(frame, res.=res, offs.=offs, stimSz.=stimSz){
@@ -85,7 +85,7 @@ rasterImage(targImS, -2.5, -2.5, 2.5, 2.5)
 ```
 
 ## SF analysis of target
-```{r, fig.width=3, fig.height=3}
+```{r}
 fftOut <- spec.fft(targImS)
 plot(fftOut)
 ```
@@ -113,7 +113,7 @@ recolor <- function(maskIm, y.=y, r.=r, g.=g, b.=b){
 ```
 
 ## Trimming the mask image
-```{r, fig.width=3, fig.height=3}
+```{r}
 maskImS <- cutMask(frame) # single mask image
 maskImS <- recolor(maskImS)
 plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
@@ -121,66 +121,121 @@ rasterImage(maskImS, -2.5, -2.5, 2.5, 2.5)
 ```
 
 ## SF analysis of the mask
-```{r, fig.width=3, fig.height=3}
+```{r}
 fftOutMask <- spec.fft(maskImS)
 plot(fftOutMask)
 ```
 
 # TF
 
-## Targets
-
-### Loading the sequence of frames
+## Loading the sequence of frames
 ```{r}
 stimDir <- paste(db, 'Projects/dm/stimuli/targs/', sep='')
 fileList <- dir(stimDir, '*.png')
+```
+
+### Targ
+```{r}
+#frames <- array(NA, dim=c(dim(frame),nFrames))
 targIm <- array(NA, dim=c(dims,nFrames,3)) # 3 targ speeds
 targVs <- c(1,3,5)
 for(curV in 1:3){
+    # print(paste('curV', curV))
     fileSubList <- grep(paste('targ1-v', as.character(targVs[curV]),sep=''), 
                         fileList, value=T)
     for(frameN in 1:nFrames){
+        # print(paste('frameN', frameN))
+        #frames[,,,frameN] <- readPNG(paste(stimDir, dir(stimDir)[frameN], sep=''))
         frame <- readPNG(paste(stimDir, fileSubList[frameN], sep=''))
         targIm[,,frameN,curV] <- cutTarg(frame)
+        # targIm <- cutTarg(frame)
+        # writePNG(targIm, paste(stimDir, 'targ/', tools::file_path_sans_ext(fileList[frameN]), 
+        #                        '_targ.png', sep=''))
     }
-}
-xy <- expand.grid(1:dims[1],1:dims[2]) # x & y coordinate combinations + v
-```
-
-### Average power across all pixels
-```{r}
-for(curV in 1:3){
-    targSpecs <- t(apply(xy,1, function(x) spectrum(targIm[x[1],x[2],,curV],plot=F)$spec))
-    freqs <- spectrum(targIm[190,190,,curV],plot=F)$freq # frequencies #[1,1,,1]
-    targSpecDf <- data.frame(freq=freqs, power=colMeans(targSpecs))
-    print(ggplot(targSpecDf, aes(x=freq, y=power)) + geom_line() + theme_bw() + 
-        ggtitle(paste('targV = ', as.character(targVs[curV]), 'dps')))
 }
 ```
 
 ### Mask
 ```{r}
-stimDir <- paste(db, 'Projects/dm/stimuli/masks/', sep='')
-fileList <- dir(stimDir, '*.png')
-maskVs <- c(.3,1,2,3,5,8)
-maskIm <- array(NA, dim=c(dims,nFrames,length(maskVs)))
-for(curV in 1:length(maskVs)){
-    fileSubList <- grep(paste('mask1-v', as.character(maskVs[curV]),sep=''), 
-                        fileList, value=T)
+#frames <- array(NA, dim=c(dim(frame),nFrames))
+maskIm <- array(NA, dim=c(dims,nFrames,3))
+for(curV in c(.3,1,2,3,5,8)){
     for(frameN in 1:nFrames){
+        #frames[,,,frameN] <- readPNG(paste(stimDir, dir(stimDir)[frameN], sep=''))
         frame <- readPNG(paste(stimDir, fileList[frameN], sep=''))
-        maskIm[,,frameN,curV] <- recolor(cutMask(frame))
+        maskImTemp <- cutMask(frame)
+        maskIm[,,frameN,curV] <- recolor(maskImTemp)
+        # maskIm <- cutMask(frame)
+        # maskIm <- recolor(maskIm)
+        # writePNG(maskIm, paste(stimDir, 'mask/', tools::file_path_sans_ext(fileList[frameN]),
+        #                        '_mask.png', sep=''))
     }
 }
 ```
 
+## Pixelwise on target
+
+```{r}
+xy <- expand.grid(1:dims[1],1:dims[2]) # x & y coordinate combinations
+freqs <- spectrum(targIm[1,1,,1],plot=F)$freq # frequencies
+```
+
+<!--
+### Raster images on high/low frequencies
+```{r}
+medFreq <- .25 # frameN/60/8
+targSpecLo <- array(NA, dim=dims) # for 2d rendering
+targSpecHi <- array(NA, dim=dims)
+#TEMP: a single, example, pixel:
+# pixInd <- which(targImS>.5, arr.ind=T)[350,] # x=104 y=89
+for(x in 1:dims[1]){
+    for(y in 1:dims[2]){
+        targSpec <- spectrum(targIm[x,y,], plot=F)
+        targSpecLo[x,y] <- sum(targSpec$spec[targSpec$freq<medFreq])
+        targSpecHi[x,y] <- sum(targSpec$spec[targSpec$freq>=medFreq])
+    }
+}
+targSpecDf <- data.frame(targSpecs, colnames=c('x','y',char(targSpec$freq)))
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(targSpecLo/max(targSpecLo), -2.5, -2.5, 2.5, 2.5)
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(targSpecHi/max(targSpecHi), -2.5, -2.5, 2.5, 2.5)
+```
+--->
+
+### Average power across all pixels
+```{r}
+targSpecs <- t(apply(xy, 1, function(x) spectrum(targIm[x[1],x[2],],plot=F)$spec))
+targSpecDf <- data.frame(freq=freqs, power=colMeans(targSpecs))
+ggplot(targSpecDf, aes(x=freq, y=power)) + geom_line() + theme_bw()
+```
+
+## Pixelwise on mask
+
+<!--
+### Raster images on high/low frequencies
+```{r}
+maskSpecLo <- array(NA, dim=dims)
+maskSpecHi <- array(NA, dim=dims)
+ptm <- proc.time()
+for(x in 1:dims[1]){
+    for(y in 1:dims[2]){
+        maskSpec <- spectrum(maskIm[x,y,], plot=F)
+        maskSpecLo[x,y] <- sum(maskSpec$spec[maskSpec$freq<medFreq])
+        maskSpecHi[x,y] <- sum(maskSpec$spec[maskSpec$freq>=medFreq])
+    }
+}
+proc.time()-ptm
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(maskSpecLo/max(maskSpecLo), -2.5, -2.5, 2.5, 2.5)
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(maskSpecHi/max(maskSpecHi), -2.5, -2.5, 2.5, 2.5)
+```
+--->
+
 ### Average power across all pixels
 ```{r, fig.width=5, fig.height=3}
-for(curV in 1:length(maskVs)){
-    maskSpecs <- t(apply(xy,1, function(x) spectrum(maskIm[x[1],x[2],,curV],plot=F)$spec))
-    freqs <- spectrum(maskIm[190,190,,curV],plot=F)$freq # frequencies #[1,1,,1]
-    maskSpecDf <- data.frame(freq=freqs, power=colMeans(maskSpecs))
-    print(ggplot(maskSpecDf, aes(x=freq, y=power)) + geom_line() + theme_bw() +
-        ggtitle(paste('maskV = ', as.character(maskVs[curV]), 'dps')))
-}
+maskSpecs <- t(apply(xy, 1, function(x) spectrum(maskIm[x[1],x[2],],plot=F)$spec))
+maskSpecDf <- data.frame(freq=freqs, power=colMeans(maskSpecs))
+ggplot(maskSpecDf, aes(x=freq, y=power)) + geom_line() + theme_bw()
 ```
