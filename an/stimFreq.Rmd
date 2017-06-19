@@ -42,65 +42,149 @@ b <- r*160/255
 res <- c(1680,1050) # resolution
 offs <- c(313,307) # offsets along x and y (169,165)
 stimSz <- 278 # 151
+dims <- c(stimSz+1, stimSz+1)
 ```
 
 # SF
 
-## Preparing the target image
+## Loading the last frame
 ```{r}
 # read in the last frame:
-frame <- readPNG(paste(stimDir, dir(stimDir)[length(dir(stimDir))], sep=''))
+fileList <- dir(stimDir, '*.png')
+nFrames <- length(fileList)
+frame <- readPNG(paste(stimDir, fileList[nFrames], sep=''))
+```
+
+## Preparing the target image
+```{r}
 # plotting:
 #plot(1:2, type='n')
-xEdges <- c(res[1]/2-offs[1]-round(stimSz/2),
-            res[1]/2-offs[1]+round(stimSz/2))
-yEdges <- c(res[2]/2-offs[2]-round(stimSz/2),
-            res[2]/2-offs[2]+round(stimSz/2))
-targIm <- frame[yEdges[1]:yEdges[2],xEdges[1]:xEdges[2],]
+cutTarg <- function(frame, res.=res, offs.=offs, stimSz.=stimSz){
+    xEdges <- c(res.[1]/2-offs.[1]-round(stimSz./2),
+                res.[1]/2-offs.[1]+round(stimSz./2))
+    yEdges <- c(res.[2]/2-offs.[2]-round(stimSz./2),
+                res.[2]/2-offs.[2]+round(stimSz./2))
+    targIm <- frame[yEdges[1]:yEdges[2],xEdges[1]:xEdges[2],]
+    targIm[which(targIm==1)] <- 0 # removing the fixation dot
+    targIm <- targIm[,,1] + targIm[,,2] + targIm[,,3]
+    targIm <- targIm/3
+    # targIm <- targIm/max(targIm)
+    return(targIm)
+}
+targImS <- cutTarg(frame) # single target image
 # identifying the fixation coordinates:
-fix <- which(targIm==1)
 ## checking for symmetry; the two numbers should be the same:
+# fix <- which(targIm==1)
 # dimSz <- length(targIm[,1,1]) # length of the first two dimensions
 # (dimSz*dimSz/2)-fix[1]
 # fix[length(fix)]-(dimSz*dimSz/2)
-targIm[fix] <- 0 # removing the fixation dot
-## plotting the image:
-# rasterImage(targIm, 1.2, 1.27, 1.8, 1.73)
+# plotting the image:
+plot(1:2, type='n')
+rasterImage(targImS, 1.2, 1.27, 1.8, 1.73)
 ```
 
 ## SF analysis of target
 ```{r}
-fftOut <- spec.fft(targIm[,,1])
-# plot(fftOut)
+fftOut <- spec.fft(targImS)
+plot(fftOut)
 ```
 
 ## Mask image
 ```{r}
-xEdgesMask <- c(res[1]/2+offs[1]+1-round(stimSz/2),
-                res[1]/2+offs[1]+1+round(stimSz/2))
-yEdgesMask <- c(res[2]/2-offs[2]-round(stimSz/2),
-                res[2]/2-offs[2]+round(stimSz/2))
-maskIm <- frame[yEdgesMask[1]:yEdgesMask[2],xEdgesMask[1]:xEdgesMask[2],]
-maskIm <- maskIm[,,1] + maskIm[,,2] + maskIm[,,3]
-maskIm <- maskIm/max(maskIm)
-maskFix <- which(maskIm==1)
-maskIm[which(maskIm==1)] <- 0
+cutMask <- function(frame, res.=res, offs.=offs, stimSz.=stimSz){
+    xEdgesMask <- c(res.[1]/2+offs.[1]+2-round(stimSz./2),
+                    res.[1]/2+offs.[1]+2+round(stimSz./2))
+    yEdgesMask <- c(res.[2]/2-offs.[2]-round(stimSz./2),
+                    res.[2]/2-offs.[2]+round(stimSz./2))
+    maskIm <- frame[yEdgesMask[1]:yEdgesMask[2],xEdgesMask[1]:xEdgesMask[2],]
+    return(maskIm)
+}
+recolor <- function(maskIm, y.=y, r.=r, g.=g, b.=b){
+    maskIm[(maskIm[,,1]+maskIm[,,2])+maskIm[,,3]==3] <- 0 # discarding the fixation dot
+    maskIm[(maskIm[,,1]+maskIm[,,2])==2] <- y.
+    maskIm[maskIm[,,1]==1] <- r.
+    maskIm[maskIm[,,2]==1] <- g.
+    maskIm[maskIm[,,3]==1] <- b.
+    maskIm <- maskIm[,,1] + maskIm[,,2] + maskIm[,,3]
+    maskIm <- maskIm/max(maskIm)
+    return(maskIm)
+}
+```
+
+## Trimming the mask image
+```{r}
+maskImS <- cutMask(frame) # single mask image
+maskImS <- recolor(maskImS)
 # plot(1:2, type='n')
-# rasterImage(maskIm, 1.2, 1.27, 1.8, 1.73)
+# rasterImage(maskImS, 1.2, 1.27, 1.8, 1.73)
 ```
 
+## SF analysis of the mask
 ```{r}
-
-maskIm <- frame[yEdgesMask[1]:yEdgesMask[2],xEdgesMask[1]:xEdgesMask[2],]
-maskIm[(maskIm[,,1]+maskIm[,,2])==2] <- y
-maskIm[maskIm[,,1]==1] <- r
-maskIm[maskIm[,,2]==1] <- g
-maskIm[maskIm[,,3]==1] <- b
-plot(1:2, type='n')
-rasterImage(maskIm, 1.2, 1.27, 1.8, 1.73)
+fftOutMask <- spec.fft(maskImS)
+plot(fftOutMask)
 ```
 
+# TF
+
+## Loading the sequence of frames
 ```{r}
-fftOutMask <- spec.fft(maskIm)
-# plot(fftOutMask)
+#frames <- array(NA, dim=c(dim(frame),nFrames))
+targIm <- array(NA, dim=c(dims,nFrames))
+maskIm <- array(NA, dim=c(dims,nFrames))
+for(frameN in 1:nFrames){
+    #frames[,,,frameN] <- readPNG(paste(stimDir, dir(stimDir)[frameN], sep=''))
+    frame <- readPNG(paste(stimDir, fileList[frameN], sep=''))
+    targIm[,,frameN] <- cutTarg(frame)
+    # targIm <- cutTarg(frame)
+    # writePNG(targIm, paste(stimDir, 'targ/', tools::file_path_sans_ext(fileList[frameN]), 
+    #                        '_targ.png', sep=''))
+    maskImTemp <- cutMask(frame)
+    maskIm[,,frameN] <- recolor(maskImTemp)
+    # maskIm <- cutMask(frame)
+    # maskIm <- recolor(maskIm)
+    # writePNG(maskIm, paste(stimDir, 'mask/', tools::file_path_sans_ext(fileList[frameN]),
+    #                        '_mask.png', sep=''))
+}
+medFreq <- frameN/60/2
+```
+
+## Pixelwise on target
+```{r}
+targSpecLo <- array(NA, dim=dims)
+targSpecHi <- array(NA, dim=dims)
+#TEMP: a single, example, pixel:
+# pixInd <- which(targImS>.5, arr.ind=T)[350,] # x=197 y=94
+ptm <- proc.time()
+for(x in 1:dims[1]){
+    for(y in 1:dims[2]){
+        targSpec <- spectrum(targIm[x,y,1:60], plot=F)
+        targSpecLo[x,y] <- sum(targSpec$spec[targSpec$freq<medFreq])
+        targSpecHi[x,y] <- sum(targSpec$spec[targSpec$freq>=medFreq])
+    }
+}
+proc.time()-ptm
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(targSpecLo/max(targSpecLo), -2.5, -2.5, 2.5, 2.5)
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(targSpecHi/max(targSpecHi), -2.5, -2.5, 2.5, 2.5)
+```
+
+## Pixelwise on mask
+```{r}
+maskSpecLo <- array(NA, dim=dims)
+maskSpecHi <- array(NA, dim=dims)
+ptm <- proc.time()
+for(x in 1:dims[1]){
+    for(y in 1:dims[2]){
+        maskSpec <- spectrum(maskIm[x,y,1:60], plot=F)
+        maskSpecLo[x,y] <- sum(maskSpec$spec[maskSpec$freq<medFreq])
+        maskSpecHi[x,y] <- sum(maskSpec$spec[maskSpec$freq>=medFreq])
+    }
+}
+proc.time()-ptm
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(maskSpecLo/max(maskSpecLo), -2.5, -2.5, 2.5, 2.5)
+plot(-2.5:2.5, -2.5:2.5, type='n', xlab='', ylab='')
+rasterImage(maskSpecHi/max(maskSpecHi), -2.5, -2.5, 2.5, 2.5)
 ```
